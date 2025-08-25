@@ -1,0 +1,42 @@
+{
+  "name": "App Relatório de Segurança",
+  "short_name": "Relatório Seg",
+  "description": "Aplicativo para registro e gestão de relatórios de segurança e desvios críticos",
+  "start_url": "/safety-report-app-pwa.html",
+  "display": "standalone",
+  "background_color": "#3b82f6",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjM2I4MmY2Ii8+CjxwYXRoIGQ9Ik05NiA1MkM3MC41IDUyIDUwIDcyLjUgNTAgOThDNTAgMTIzLjUgNzAuNSAxNDQgOTYgMTQ0QzEyMS41IDE0NCAxNDIgMTIzLjUgMTQyIDk4QzE0MiA3Mi41IDEyMS41IDUyIDk2IDUyWiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTc2IDExMEM4MS41MjIgMTEwIDg2IDEwNS41MjIgODYgMTAwQzg2IDk0LjQ3OCA4MS41MjIgOTAgNzYgOTBDNzAuNDc4IDkwIDY2IDk0LjQ3OCA2NiAxMDBDNjYgMTA1LjUyMiA3MC40NzggMTEwIDc2IDExMFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0xMTYgMTEwQzEyMS41MjIgMTEwIDEyNiAxMDUuNTIyIDEyNiAxMDBDMTI2IDk0LjQ3OCAxMjEuNTIyIDkwIDExNiA5MEMxMTAuNDc4IDkwIDEwNiA5NC40NzggMTA2IDEwMEMxMDYgMTA1LjUyMiAxMTAuNDc4IDExMCAxMTYgMTEwWiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTk2IDEzMEM4OC4yNyAxMzAgODEgMTMyLjg2IDc0IDEzOEw3NCAxNThIMTE4VjEzOEMxMTEgMTMyLjg2IDEwMy43MyAxMzAgOTYgMTMwWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiBmaWxsPSIjM2I4MmY2Ii8+CjxwYXRoIGQ9Ik0yNTYgMTM4QzIwOS40IDEzOCAxNzIgMTc1LjQgMTcyIDIyMkMxNzIgMjY4LjYgMjA5LjQgMzA2IDI1NiAzMDZDMzAyLjYgMzA2IDM0MCAyNjguNiAzNDAgMjIyQzM0MCAxNzUuNCAzMDIuNiAxMzggMjU2IDEzOFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0yMDIgMjcwQzIxNy44IDI3MCAyMzAgMjU3LjggMjMwIDI0MkMyMzAgMjI2LjIgMjE3LjggMjE0IDIwMiAyMTRDMTg2LjIgMjE0IDE3NCAyMjYuMiAxNzQgMjQyQzE3NCAyNTcuOCAxODYuMiAyNzAgMjAyIDI3MFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zMTAgMjcwQzMyNS44IDI3MCAzMzggMjU3LjggMzM4IDI0MkMzMzggMjI2LjIgMzI1LjggMjE0IDMxMCAyMTRDMjk0LjIgMjE0IDI4MiAyMjYuMiAyODIgMjQyQzI4MiAyNTcuOCAyOTQuMiAyNzAgMzEwIDI3MFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0yNTYgMzQ2QzIzMC44IDM0NiAyMDYgMzUzLjQgMTg0IDM2NkwxODQgNDA2SDMyOFYzNjZDMzA2IDM1My40IDI4MS4yIDM0NiAyNTYgMzQ2WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business", "utilities"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "scope": "/",
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/540x720/3b82f6/ffffff?text=Relat%C3%B3rio+Seguran%C3%A7a",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://via.placeholder.com/720x540/3b82f6/ffffff?text=Relat%C3%B3rio+Seguran%C3%A7a",
+      "sizes": "720x540",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
+}
