@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário de Bordo Técnico das Contratadas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
+    <!-- html2pdf library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* Estilos PWA e offline */
+        .offline-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ef4444;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            z-index: 1000;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+        .offline-indicator.show {
+            transform: translateY(0);
+        }
+        
+        .sync-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #3b82f6;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            z-index: 1000;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+        .sync-indicator.show {
+            transform: translateY(0);
+        }
+        
+        .sync-success {
+            background: #10b981;
+        }
+        
+        .sync-error {
+            background: #ef4444;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .photo-preview {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .modal-backdrop {
+            backdrop-filter: blur(4px);
+        }
+        
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Indicadores de Status -->
+    <div id="offlineIndicator" class="offline-indicator">
+        📱 Modo Offline - Dados salvos localmente
+    </div>
+    
+    <div id="syncIndicator" class="sync-indicator">
+        <span class="loading-spinner"></span> Sincronizando com a nuvem...
+    </div>
+
+    <!-- Tela de Configuração Firebase -->
+    <div id="firebaseConfigScreen" class="min-h-screen flex items-center justify-center p-4 bg-gray-900 bg-opacity-50 fixed inset-0 z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl">⚙️</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Configuração do Firebase</h1>
+                <p class="text-gray-600 mt-2">Configure a conexão com a nuvem</p>
+            </div>
+            
+            <form id="firebaseConfigForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                    <input type="text" id="apiKey" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="Sua chave API do Firebase">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Auth Domain</label>
+                    <input type="text" id="authDomain" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ex: seu-projeto.firebaseapp.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Project ID</label>
+                    <input type="text" id="projectId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do seu projeto">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Storage Bucket</label>
+                    <input type="text" id="storageBucket" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ex: seu-projeto.appspot.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Messaging Sender ID</label>
+                    <input type="text" id="messagingSenderId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do remetente">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">App ID</label>
+                    <input type="text" id="appId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do aplicativo">
+                </div>
+                
+                <div id="configError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                </div>
+                
+                <div id="configSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                    ✅ Configuração salva! Conectando à nuvem...
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                    🔗 Conectar à Nuvem
+                </button>
+                
+                <div class="text-center">
+                    <button type="button" onclick="useLocalMode()" 
+                            class="text-gray-600 hover:text-gray-800 font-medium">
+                        ⚡ Usar modo local apenas
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tela de Login -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl">🛡️</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Diário de Bordo Técnico das Contratadas</h1>
+                <p class="text-gray-600 mt-2">Coord gestão de processos</p>
+                <div id="cloudStatus" class="mt-2 text-sm text-green-600">
+                    ✅ Conectado à nuvem
+                </div>
+            </div>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="email" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="seu@email.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                    <input type="password" id="password" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Sua senha">
+                </div>
+                
+                <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                    ☁️ Entrar na Nuvem
+                </button>
+                
+                <div class="text-center">
+                    <button type="button" onclick="showRegistration()" 
+                            class="text-green-600 hover:text-green-800 font-medium">
+                        📝 Criar nova conta
+                    </button>
+                </div>
+                
+                <div class="text-center text-sm text-gray-600 mt-4">
+                    <p><strong>Ou use acesso local:</strong></p>
+                    <button type="button" onclick="useLocalAccess()" 
+                            class="text-orange-600 hover:text-orange-800 font-medium mt-2">
+                        📱 Acesso Local sem Nuvem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tela de Registro -->
+    <div id="registrationScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl">📝</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Criar Conta na Nuvem</h1>
+                <p class="text-gray-600 mt-2">Registre-se no sistema</p>
+            </div>
+            
+            <form id="registrationForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
+                    <input type="text" id="nomeCompleto" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                           placeholder="Seu nome completo">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                    <input type="email" id="emailCadastro" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                           placeholder="seu@email.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Senha *</label>
+                    <input type="password" id="senhaCadastro" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                           placeholder="Mínimo 6 caracteres"
+                           minlength="6">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Confirmar Senha *</label>
+                    <input type="password" id="confirmarSenha" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                           placeholder="Confirme sua senha">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Empresa</label>
+                    <input type="text" id="empresa" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                           placeholder="Sua empresa (opcional)">
+                </div>
+                
+                <div id="registrationError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                </div>
+                
+                <div id="registrationSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                    ☁️ Criar Conta na Nuvem
+                </button>
+                
+                <div class="text-center">
+                    <button type="button" onclick="showLogin()" 
+                            class="text-blue-600 hover:text-blue-800 font-medium">
+                        ↩️ Voltar para login
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tela Principal do App -->
+    <div id="appScreen" class="hidden min-h-screen">
+        <!-- Header com Status de Sincronização -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">Relatório de Segurança</h1>
+                        <p class="text-sm text-gray-600" id="userInfo"></p>
+                    </div>
+                    <div id="syncStatus" class="flex items-center space-x-2 text-sm">
+                        <span class="loading-spinner" id="syncSpinner"></span>
+                        <span id="syncText">Sincronizado</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="forceSync()" class="text-blue-600 hover:text-blue-800 text-sm font-medium" aria-label="Sincronizar dados com a nuvem">
+                        🔄 Sincronizar
+                    </button>
+                    <button onclick="showCloudManager()" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
+                        ☁️ Gerenciar
+                    </button>
+                    <button onclick="openUserProfile()" class="flex items-center space-x-1 text-purple-600 hover:text-purple-800 text-sm font-medium" aria-label="Perfil do Usuário">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.12 17.804z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Perfil</span>
+                    </button>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-800 font-medium">
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Conteúdo Principal -->
+        <div class="max-w-6xl mx-auto p-4">
+                <div class="flex space-x-4 mb-6">
+                <button id="btnRelatorio" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                    Novo Relatório de Segurança
+                </button>
+                <button id="btnDesviosCriticos" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                    Cadastrar Desvios Críticos
+                </button>
+                <!-- Removed the old Perfil do Usuário button as it's now in the header -->
+                <!-- <button id="btnPerfilUsuario" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                    Perfil do Usuário
+                </button> -->
+            </div>
+
+            <!-- Formulário de Relatório -->
+            <div id="formRelatorio" class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-6">Novo Relatório de Segurança</h2>
+                
+                <form id="reportForm" class="space-y-6">
+                    <!-- Campos do formulário (mantidos do original) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Localização *</label>
+                            <input type="text" id="localizacao" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Local da inspeção">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">TST presente em campo? *</label>
+                            <select id="tstPresente" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" onchange="toggleTSTFields()">
+                                <option value="">Selecione</option>
+                                <option value="sim">Sim</option>
+                                <option value="nao">Não</option>
+                                <option value="ausente">Ausente</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Campos Condicionais - TST Ausente -->
+                    <div id="tstAusenteFields" class="hidden space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">1º dia da ausência</label>
+                            <input type="date" id="primeiroDiaAusencia" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Dias ausente</label>
+                            <input type="number" id="diasAusente" min="1" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Número de dias ausente">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Motivo</label>
+                            <select id="motivo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Selecione o motivo</option>
+                                <option value="folga">Folga</option>
+                                <option value="ferias">Férias</option>
+                                <option value="treinamento">Treinamento</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Campos Condicionais - TST Presente -->
+                    <div id="tstPresenteFields" class="hidden space-y-4">
+                        <h3 class="text-md font-semibold text-gray-800 mt-6 mb-4">Atividades Realizadas</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nº Boa Jornada Acompanhada</label>
+                                <input type="number" id="boaJornada" min="0" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nº Inspeções RAC</label>
+                                <input type="number" id="inspecoesRAC" min="0" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nº Inspeções ART/PTS/OMVE</label>
+                                <input type="number" id="inspecoesART" min="0" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nº Outras Inspeções de Segurança ou 5S</label>
+                                <input type="number" id="outrasInspecoes" min="0" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nº Interdições Críticas</label>
+                                <input type="number" id="interdicoesCriticas" min="0" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nº N3 registrados</label>
+                                <input type="number" id="n3Registrados" min="0" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nº Ações Internas (da própria empresa)</label>
+                                <input type="number" id="acoesInternas" min="0" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nº Ações para a VALE</label>
+                                <input type="number" id="acoesVale" min="0" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="pt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Houve desvio que gere risco de morte ou que paralisou toda a atividade, equipamento ou área por mais de 30 minutos?</label>
+                            <select id="houveDesvio" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" onchange="toggleDesvioFields()">
+                                <option value="">Selecione</option>
+                                <option value="sim">Sim</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
+
+                        <!-- Campos Condicionais - Desvio Crítico -->
+                        <div id="desvioFields" class="hidden space-y-4 bg-red-50 p-4 rounded-lg mt-4">
+                            <h4 class="text-sm font-semibold text-red-800 mb-3">Informações do Desvio</h4>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de desvio</label>
+                                <select id="tipoDesvio" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Selecione</option>
+                                    <option value="interdicao">Interdição</option>
+                                    <option value="n3">N3</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Descrição do desvio</label>
+                                <textarea id="descricaoDesvio" rows="3" 
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                          placeholder="Descreva detalhadamente o desvio ocorrido"></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Local (seja detalhista)</label>
+                                <input type="text" id="localDesvio" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                       placeholder="Local exato onde ocorreu o desvio">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Ação tomada</label>
+                                <textarea id="acaoTomada" rows="3" 
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                          placeholder="Descreva a ação tomada para corrigir o desvio"></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Status da ação</label>
+                                <select id="statusAcao" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Selecione o status</option>
+                                    <option value="pendente">Pendente</option>
+                                    <option value="em_andamento">Em andamento</option>
+                                    <option value="concluido">Concluído</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Foto do desvio (opcional)</label>
+                                <input type="file" id="fotoDesvio" accept="image/*" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <div id="previewDesvio" class="mt-2"></div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Foto da solução (opcional)</label>
+                                <input type="file" id="fotoSolucao" accept="image/*" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <div id="previewSolucao" class="mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                        <button type="submit" 
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                            💾 Salvar Local & Sincronizar
+                        </button>
+                        <button type="button" onclick="clearForm()" 
+                                class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                            🗑️ Limpar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Novo Formulário de Desvios Críticos -->
+            <div id="formDesviosCriticos" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-6">Cadastro de Desvios Críticos</h2>
+                <form id="desviosCriticosForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-semibold text-gray-700 mb-1">Data</label>
+                            <input type="datetime-local" id="dcData" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                   placeholder="Data e hora">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-gray-700 mb-1">Local</label>
+                            <input type="text" id="dcLocal" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                   placeholder="Local do desvio">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-gray-700 mb-1">Área</label>
+                            <input type="text" id="dcArea" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                   placeholder="Área relacionada">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-gray-700 mb-1">Responsável</label>
+                            <input type="text" id="dcResponsavel" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                   placeholder="Nome do responsável">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-gray-700 mb-1">Emitente</label>
+                            <input type="text" id="dcEmitente" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                   placeholder="Nome do emitente">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block font-semibold text-gray-700 mb-1">Descrição do desvio</label>
+                            <textarea id="dcDescricao" rows="4" required
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                      placeholder="Descreva o desvio crítico"></textarea>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-gray-700 mb-1">Classificação</label>
+                            <input type="text" id="dcClassificacao" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                   placeholder="Classificação do desvio">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-gray-700 mb-1">RAC</label>
+                            <input type="text" id="dcRAC" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                   placeholder="RAC relacionado">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block font-semibold text-gray-700 mb-1">Recomendação Comitê pela Vida (S/N)</label>
+                            <input type="text" id="dcRecomendacao" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                   placeholder="Recomendação do comitê">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block font-semibold text-gray-700 mb-1">Ações Imediatas</label>
+                            <textarea id="dcAcoesImediatas" rows="4" required
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                      placeholder="Descreva as ações imediatas"></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block font-semibold text-gray-700 mb-1">Principais Aprendizados</label>
+                            <textarea id="dcPrincipaisAprendizados" rows="4" required
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                      placeholder="Descreva os principais aprendizados"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                        <button type="submit"
+                                class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                            💾 Salvar Desvio Crítico
+                        </button>
+                        <button type="button" id="btnLimparDesvio"
+                                class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                            🗑️ Limpar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Relatórios Salvos -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800">Relatórios</h2>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="exportReports()" 
+                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            📤 Exportar
+                        </button>
+                        <button onclick="showSyncStats()" 
+                                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            📊 Estatísticas
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="savedReports" class="space-y-3">
+                    <p class="text-gray-500 text-center py-8">Nenhum relatório salvo</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Perfil do Usuário -->
+    <div id="userProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.12 17.804z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Perfil do Usuário</span>
+                </h2>
+                <button onclick="closeUserProfile()" class="text-gray-500 hover:text-gray-700 text-2xl" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="userProfileForm" class="space-y-4">
+                <div>
+                    <label for="fullName" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                    <input type="text" id="fullName" name="fullName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent" required>
+                </div>
+                <div>
+                    <label for="emailProfile" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="emailProfile" name="emailProfile" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
+                </div>
+                <div>
+                    <label for="empresa" class="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                    <input type="text" id="empresa" name="empresa" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent" placeholder="Sua empresa">
+                </div>
+                <div>
+                    <label for="contrato" class="block text-sm font-medium text-gray-700 mb-1">Contrato</label>
+                    <input type="text" id="contrato" name="contrato" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent" placeholder="Número do contrato">
+                </div>
+                <div>
+                    <label for="telefone" class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                    <input type="tel" id="telefone" name="telefone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent" placeholder="(11) 99999-9999">
+                </div>
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="ferias" name="ferias" class="h-4 w-4 text-purple-600 border-gray-300 rounded">
+                        <span>Está de férias?</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="demobilizado" name="demobilizado" class="h-4 w-4 text-purple-600 border-gray-300 rounded">
+                        <span>Demobilizado?</span>
+                    </label>
+                </div>
+                <div class="flex justify-end space-x-4 pt-4 border-t">
+                    <button type="button" onclick="closeUserProfile()" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-200">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes do Relatório -->
+    <div id="reportDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800">📋 Detalhes do Relatório</h2>
+                    <button onclick="closeReportDetails()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+
+                <div id="reportDetailsContent" class="space-y-6">
+                    <!-- Conteúdo será preenchido dinamicamente -->
+                </div>
+
+                <div class="flex gap-3 mt-6 pt-4 border-t">
+                    <button onclick="shareReportOnWhatsApp()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                        📱 Compartilhar no WhatsApp
+                    </button>
+                    <div id="imageDownloadButtons" class="flex-1 flex gap-2">
+                        <!-- Botões de download serão adicionados dinamicamente -->
+                    </div>
+                    <button onclick="saveReportAsPDF()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                        💾 Salvar como PDF
+                    </button>
+                    <button onclick="closeReportDetails()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração e Estado da Aplicação
+        const APP_CONFIG = {
+            firebaseConfig: null,
+            useFirebase: false,
+            currentUser: null,
+            reports: [],
+            pendingSync: [],
+            syncInterval: null,
+            userProfile: {
+                fullName: '',
+                email: '',
+                empresa: '',
+                contrato: '',
+                telefone: '',
+                ferias: false,
+                demobilizado: false
+            }
+        };
+
+        // Inicialização da Aplicação
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Iniciando Sistema de Relatórios com Sincronização em Nuvem...');
+            
+            // Verificar configuração salva
+            const savedConfig = localStorage.getItem('firebaseConfig');
+            if (savedConfig) {
+                try {
+                    APP_CONFIG.firebaseConfig = JSON.parse(savedConfig);
+                    await initializeFirebase();
+                    showLogin();
+                } catch (error) {
+                    console.error('Erro ao carregar configuração:', error);
+                    showFirebaseConfig();
+                }
+            } else {
+                showFirebaseConfig();
+            }
+            
+            // Configurar detecção de offline
+            setupOfflineDetection();
+            
+            // Carregar dados locais
+            loadLocalData();
+
+            // Load user profile from localStorage
+            loadUserProfile();
+        });
+
+        // Firebase Initialization
+        async function initializeFirebase() {
+            try {
+                const app = firebase.initializeApp(APP_CONFIG.firebaseConfig);
+                APP_CONFIG.firebaseApp = app;
+                APP_CONFIG.firestore = firebase.firestore();
+                APP_CONFIG.auth = firebase.auth();
+                APP_CONFIG.storage = firebase.storage();
+                
+                console.log('✅ Firebase inicializado com sucesso');
+                APP_CONFIG.useFirebase = true;
+                
+                // Configurar listener de autenticação
+                APP_CONFIG.auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        console.log('👤 Usuário autenticado:', user.email);
+                        APP_CONFIG.currentUser = user;
+                        startSyncService();
+                    } else {
+                        console.log('👤 Usuário não autenticado');
+                        APP_CONFIG.currentUser = null;
+                    }
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('❌ Erro ao inicializar Firebase:', error);
+                APP_CONFIG.useFirebase = false;
+                showNotification('⚠️ Modo local ativado (erro no Firebase)', 'warning');
+                return false;
+            }
+        }
+
+        // Configuração do Firebase
+        function showFirebaseConfig() {
+            document.getElementById('firebaseConfigScreen').classList.remove('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+        }
+
+        function useLocalMode() {
+            APP_CONFIG.useFirebase = false;
+            document.getElementById('firebaseConfigScreen').classList.add('hidden');
+            showLogin();
+            showNotification('📱 Modo local ativado', 'info');
+        }
+
+        // User Profile Modal Functions
+        function openUserProfile() {
+            loadUserProfileToForm();
+            document.getElementById('userProfileModal').classList.remove('hidden');
+        }
+
+        function closeUserProfile() {
+            document.getElementById('userProfileModal').classList.add('hidden');
+        }
+
+        function loadUserProfile() {
+            const savedProfile = localStorage.getItem('userProfile');
+            if (savedProfile) {
+                APP_CONFIG.userProfile = JSON.parse(savedProfile);
+            }
+        }
+
+        function loadUserProfileToForm() {
+            const profile = APP_CONFIG.userProfile;
+            document.getElementById('fullName').value = profile.fullName || '';
+            document.getElementById('emailProfile').value = profile.email || (APP_CONFIG.currentUser ? APP_CONFIG.currentUser.email : '');
+            document.getElementById('empresa').value = profile.empresa || '';
+            document.getElementById('contrato').value = profile.contrato || '';
+            document.getElementById('telefone').value = profile.telefone || '';
+            document.getElementById('ferias').checked = profile.ferias || false;
+            document.getElementById('demobilizado').checked = profile.demobilizado || false;
+        }
+
+        function saveUserProfileFromForm() {
+            const profile = {
+                fullName: document.getElementById('fullName').value,
+                email: document.getElementById('emailProfile').value,
+                empresa: document.getElementById('empresa').value,
+                contrato: document.getElementById('contrato').value,
+                telefone: document.getElementById('telefone').value,
+                ferias: document.getElementById('ferias').checked,
+                demobilizado: document.getElementById('demobilizado').checked
+            };
+            APP_CONFIG.userProfile = profile;
+            localStorage.setItem('userProfile', JSON.stringify(profile));
+            showNotification('✅ Perfil do usuário salvo', 'success');
+        }
+
+        // Event listener for user profile form submission
+        document.getElementById('userProfileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveUserProfileFromForm();
+            closeUserProfile();
+
+});
+
+        document.getElementById('firebaseConfigForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const config = {
+                apiKey: document.getElementById('apiKey').value,
+                authDomain: document.getElementById('authDomain').value,
+                projectId: document.getElementById('projectId').value,
+                storageBucket: document.getElementById('storageBucket').value,
+                messagingSenderId: document.getElementById('messagingSenderId').value,
+                appId: document.getElementById('appId').value
+            };
+            
+            try {
+                // Validar configuração
+                APP_CONFIG.firebaseConfig = config;
+                const success = await initializeFirebase();
+                
+                if (success) {
+                    // Salvar configuração
+                    localStorage.setItem('firebaseConfig', JSON.stringify(config));
+                    document.getElementById('configSuccess').classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        document.getElementById('firebaseConfigScreen').classList.add('hidden');
+                        showLogin();
+                    }, 2000);
+                }
+            } catch (error) {
+                document.getElementById('configError').textContent = 'Erro na configuração: ' + error.message;
+                document.getElementById('configError').classList.remove('hidden');
+            }
+        });
+
+        // Sistema de Autenticação
+        async function showLogin() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('registrationScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.add('hidden');
+            document.getElementById('firebaseConfigScreen').classList.add('hidden');
+            
+            updateCloudStatus();
+        }
+
+        function showRegistration() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('registrationScreen').classList.remove('hidden');
+        }
+
+        function useLocalAccess() {
+            APP_CONFIG.useFirebase = false;
+            APP_CONFIG.currentUser = { 
+                email: 'usuario@local.com', 
+                uid: 'local-user', 
+                displayName: 'Usuário Local' 
+            };
+            showApp();
+            showNotification('📱 Modo local ativado', 'info');
+        }
+
+        // Login com Firebase
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            errorDiv.classList.add('hidden');
+            
+            try {
+                if (APP_CONFIG.useFirebase) {
+                    const userCredential = await APP_CONFIG.auth.signInWithEmailAndPassword(email, password);
+                    console.log('✅ Login bem-sucedido');
+                    showApp();
+                } else {
+                    // Modo local
+                    useLocalAccess();
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Erro no login: ' + error.message;
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        // Registro de nova conta
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('emailCadastro').value;
+            const password = document.getElementById('senhaCadastro').value;
+            const confirmarSenha = document.getElementById('confirmarSenha').value;
+            const nome = document.getElementById('nomeCompleto').value;
+            const empresa = document.getElementById('empresa').value;
+            const errorDiv = document.getElementById('registrationError');
+            const successDiv = document.getElementById('registrationSuccess');
+            
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+            
+            if (password !== confirmarSenha) {
+                errorDiv.textContent = 'As senhas não coincidem';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                if (APP_CONFIG.useFirebase) {
+                    const userCredential = await APP_CONFIG.auth.createUserWithEmailAndPassword(email, password);
+                    
+                    // Atualizar perfil do usuário
+                    await userCredential.user.updateProfile({
+                        displayName: nome
+                    });
+                    
+                    // Salvar informações adicionais no Firestore
+                    await APP_CONFIG.firestore.collection('users').doc(userCredential.user.uid).set({
+                        nome: nome,
+                        email: email,
+                        empresa: empresa,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    successDiv.textContent = 'Conta criada com sucesso! Redirecionando...';
+                    successDiv.classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        showLogin();
+                    }, 2000);
+                } else {
+                    successDiv.textContent = 'Modo local: conta criada localmente';
+                    successDiv.classList.remove('hidden');
+                    setTimeout(() => {
+                        showLogin();
+                    }, 2000);
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Erro ao criar conta: ' + error.message;
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        // Sistema de Sincronização
+        async function startSyncService() {
+            if (!APP_CONFIG.useFirebase) return;
+            
+            console.log('🔄 Iniciando serviço de sincronização');
+            
+            // Sincronizar a cada 5 minutos
+            APP_CONFIG.syncInterval = setInterval(async () => {
+                if (navigator.onLine) {
+                    await syncData();
+                }
+            }, 5 * 60 * 1000);
+            
+            // Sincronizar imediatamente
+            await syncData();
+        }
+
+        async function syncData() {
+            if (!APP_CONFIG.useFirebase || !APP_CONFIG.currentUser) return;
+            
+            showSyncIndicator('Sincronizando...');
+            
+            try {
+                // 1. Baixar dados da nuvem
+                await downloadFromCloud();
+                
+                // 2. Enviar dados locais para nuvem
+                await uploadToCloud();
+                
+                // 3. Processar pendências
+                await processPendingSync();
+                
+                showSyncIndicator('✅ Sincronização concluída', 'success');
+                
+                // Atualizar interface
+                await displayReports();
+                updateSyncStats();
+                
+            } catch (error) {
+                console.error('❌ Erro na sincronização:', error);
+                showSyncIndicator('❌ Erro na sincronização', 'error');
+            }
+        }
+
+        async function downloadFromCloud() {
+            if (!APP_CONFIG.useFirebase) return;
+            
+            try {
+                const snapshot = await APP_CONFIG.firestore
+                    .collection('reports')
+                    .where('userId', '==', APP_CONFIG.currentUser.uid)
+                    .orderBy('updatedAt', 'desc')
+                    .get();
+                
+                const cloudReports = [];
+                snapshot.forEach(doc => {
+                    cloudReports.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Mesclar com dados locais
+                await mergeReports(cloudReports);
+                
+                console.log('⬇️ Dados baixados da nuvem:', cloudReports.length);
+            } catch (error) {
+                console.error('Erro ao baixar da nuvem:', error);
+            }
+        }
+
+        async function uploadToCloud() {
+            if (!APP_CONFIG.useFirebase) return;
+            
+            try {
+                const localReports = APP_CONFIG.reports.filter(report => 
+                    !report.synced || report.updatedAt > report.lastSync
+                );
+                
+                for (const report of localReports) {
+                    await saveReportToCloud(report);
+                }
+                
+                console.log('⬆️ Dados enviados para nuvem:', localReports.length);
+            } catch (error) {
+                console.error('Erro ao enviar para nuvem:', error);
+            }
+        }
+
+        async function saveReportToCloud(report) {
+            if (!APP_CONFIG.useFirebase) return report;
+            
+            try {
+                const reportData = {
+                    ...report,
+                    userId: APP_CONFIG.currentUser.uid,
+                    userEmail: APP_CONFIG.currentUser.email,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastSync: new Date().toISOString()
+                };
+                
+                if (report.id && report.id.startsWith('local_')) {
+                    // Novo relatório - criar documento
+                    const docRef = await APP_CONFIG.firestore.collection('reports').add(reportData);
+                    report.id = docRef.id;
+                    report.synced = true;
+                } else if (report.id) {
+                    // Relatório existente - atualizar
+                    await APP_CONFIG.firestore.collection('reports').doc(report.id).update(reportData);
+                    report.synced = true;
+                }
+                
+                // Salvar fotos se houver
+                if (report.fotoDesvio) {
+                    await uploadPhoto(report.id, 'desvio', report.fotoDesvio);
+                }
+                if (report.fotoSolucao) {
+                    await uploadPhoto(report.id, 'solucao', report.fotoSolucao);
+                }
+                
+                return report;
+            } catch (error) {
+                console.error('Erro ao salvar na nuvem:', error);
+                report.syncError = error.message;
+                return report;
+            }
+        }
+
+        async function uploadPhoto(reportId, type, photoData) {
+            if (!APP_CONFIG.useFirebase) return;
+            
+            try {
+                const storageRef = APP_CONFIG.storage.ref();
+                const photoRef = storageRef.child(`reports/${reportId}/${type}_${Date.now()}.jpg`);
+                
+                // Converter data URL para blob
+                const response = await fetch(photoData);
+                const blob = await response.blob();
+                
+                await photoRef.put(blob);
+                const downloadURL = await photoRef.getDownloadURL();
+                
+                // Atualizar relatório com URL da foto
+                await APP_CONFIG.firestore.collection('reports').doc(reportId).update({
+                    [`foto${type.charAt(0).toUpperCase() + type.slice(1)}Url`]: downloadURL
+                });
+                
+                return downloadURL;
+            } catch (error) {
+                console.error('Erro ao fazer upload da foto:', error);
+                throw error;
+            }
+        }
+
+        async function mergeReports(cloudReports) {
+            // Implementar lógica de merge entre dados locais e da nuvem
+            // Resolver conflitos baseado em timestamp
+            for (const cloudReport of cloudReports) {
+                const localReport = APP_CONFIG.reports.find(r => r.id === cloudReport.id);
+                
+                if (!localReport) {
+                    // Novo relatório da nuvem
+                    APP_CONFIG.reports.push(cloudReport);
+                } else if (new Date(cloudReport.updatedAt) > new Date(localReport.updatedAt)) {
+                    // Dado da nuvem mais recente
+                    const index = APP_CONFIG.reports.findIndex(r => r.id === cloudReport.id);
+                    APP_CONFIG.reports[index] = cloudReport;
+                }
+                // Se dado local for mais recente, manter local (será enviado na próxima sincronização)
+            }
+            
+            // Salvar dados mesclados localmente
+            saveLocalData();
+        }
+
+        function showSyncIndicator(message, type = '') {
+            const indicator = document.getElementById('syncIndicator');
+            const text = indicator.querySelector('span:not(.loading-spinner)') || document.createElement('span');
+            
+            text.textContent = message;
+            if (!text.parentNode) {
+                indicator.appendChild(text);
+            }
+            
+            indicator.className = 'sync-indicator show';
+            if (type === 'success') indicator.classList.add('sync-success');
+            if (type === 'error') indicator.classList.add('sync-error');
+            
+            if (type !== '') {
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        function updateCloudStatus() {
+            const status = document.getElementById('cloudStatus');
+            if (APP_CONFIG.useFirebase) {
+                status.textContent = '✅ Conectado à nuvem';
+                status.className = 'mt-2 text-sm text-green-600';
+            } else {
+                status.textContent = '📱 Modo local (sem nuvem)';
+                status.className = 'mt-2 text-sm text-orange-600';
+            }
+        }
+
+        // Funções da Interface
+        function showApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('registrationScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            
+            if (APP_CONFIG.currentUser) {
+                document.getElementById('userInfo').textContent = 
+                    `${APP_CONFIG.currentUser.displayName || APP_CONFIG.currentUser.email} - ${APP_CONFIG.useFirebase ? 'Nuvem' : 'Local'}`;
+            }
+            
+            displayReports();
+            updateSyncStats();
+        }
+
+        function logout() {
+            if (APP_CONFIG.useFirebase && APP_CONFIG.auth) {
+                APP_CONFIG.auth.signOut();
+            }
+            
+            APP_CONFIG.currentUser = null;
+            if (APP_CONFIG.syncInterval) {
+                clearInterval(APP_CONFIG.syncInterval);
+            }
+            
+            showLogin();
+        }
+
+        // Sistema Offline
+        function setupOfflineDetection() {
+            const indicator = document.getElementById('offlineIndicator');
+            
+            function updateOnlineStatus() {
+                if (!navigator.onLine) {
+                    indicator.classList.add('show');
+                    showSyncIndicator('📶 Sem conexão', 'error');
+                } else {
+                    indicator.classList.remove('show');
+                    if (APP_CONFIG.useFirebase) {
+                        showSyncIndicator('✅ Conexão restaurada - sincronizando...');
+                        setTimeout(() => syncData(), 2000);
+                    }
+                }
+            }
+            
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
+            updateOnlineStatus();
+        }
+
+        // Armazenamento Local
+        function saveLocalData() {
+            const data = {
+                reports: APP_CONFIG.reports,
+                lastSync: new Date().toISOString()
+            };
+            localStorage.setItem('safetyReportsData', JSON.stringify(data));
+        }
+
+        function loadLocalData() {
+            const saved = localStorage.getItem('safetyReportsData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                APP_CONFIG.reports = data.reports || [];
+            }
+        }
+
+        // Gerenciamento de Relatórios
+        document.getElementById('reportForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const report = {
+                id: 'local_' + Date.now(),
+                timestamp: new Date().toLocaleString('pt-BR'),
+                localizacao: document.getElementById('localizacao').value,
+                tstPresente: document.getElementById('tstPresente').value,
+                // ... outros campos do formulário
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                synced: false
+            };
+            
+            // Adicionar campos específicos se necessário
+            if (report.tstPresente === 'ausente') {
+                report.primeiroDiaAusencia = document.getElementById('primeiroDiaAusencia').value;
+                report.diasAusente = document.getElementById('diasAusente').value;
+                report.motivo = document.getElementById('motivo').value;
+            }
+            
+            if (document.getElementById('houveDesvio').value === 'sim') {
+                report.houveDesvio = 'sim';
+                report.tipoDesvio = document.getElementById('tipoDesvio').value;
+                report.descricaoDesvio = document.getElementById('descricaoDesvio').value;
+                report.localDesvio = document.getElementById('localDesvio').value;
+                report.acaoTomada = document.getElementById('acaoTomada').value;
+                report.statusAcao = document.getElementById('statusAcao').value;
+                
+                // Processar fotos se houver
+                const fotoDesvio = document.getElementById('fotoDesvio').files[0];
+                if (fotoDesvio) {
+                    report.fotoDesvio = await readFileAsDataURL(fotoDesvio);
+                }
+                
+                const fotoSolucao = document.getElementById('fotoSolucao').files[0];
+                if (fotoSolucao) {
+                    report.fotoSolucao = await readFileAsDataURL(fotoSolucao);
+                }
+            }
+            
+            // Salvar relatório
+            APP_CONFIG.reports.push(report);
+            saveLocalData();
+            
+            // Tentar sincronizar se online
+            if (navigator.onLine && APP_CONFIG.useFirebase) {
+                await saveReportToCloud(report);
+            }
+            
+            displayReports();
+            clearForm();
+            
+            showNotification('✅ Relatório salvo' + (APP_CONFIG.useFirebase ? ' e sincronizado' : ''), 'success');
+        });
+
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function displayReports() {
+            const container = document.getElementById('savedReports');
+            const reports = APP_CONFIG.reports.sort((a, b) =>
+                new Date(b.updatedAt) - new Date(a.updatedAt)
+            );
+
+            if (reports.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum relatório salvo</p>';
+                return;
+            }
+
+            container.innerHTML = reports.map(report => {
+                let imageHtml = '';
+                if (report.fotoDesvio || report.fotoSolucao) {
+                    imageHtml = '<div class="mt-3 grid grid-cols-2 gap-2">';
+                    if (report.fotoDesvio) {
+                        imageHtml += `<img src="${report.fotoDesvio}" alt="Foto do desvio" class="w-full h-16 object-cover rounded border">`;
+                    }
+                    if (report.fotoSolucao) {
+                        imageHtml += `<img src="${report.fotoSolucao}" alt="Foto da solução" class="w-full h-16 object-cover rounded border">`;
+                    }
+                    imageHtml += '</div>';
+                }
+
+                return `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer" onclick="showReportDetails('${report.id}')">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h3 class="font-medium text-gray-800">${report.localizacao}</h3>
+                                <p class="text-sm text-gray-600">📅 ${report.timestamp}</p>
+                                <p class="text-xs text-gray-500">${report.tstPresente === 'sim' ? '✅ TST Presente' : '❌ TST Ausente'}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                ${report.synced ?
+                                    '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">☁️ Sincronizado</span>' :
+                                    '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">📱 Pendente</span>'
+                                }
+                                <button onclick="event.stopPropagation(); deleteReport('${report.id}')" class="text-red-600 hover:text-red-800 text-sm">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                        ${report.houveDesvio === 'sim' ? `
+                            <div class="bg-red-50 p-2 rounded mt-2">
+                                <p class="text-xs text-red-800">⚠️ Desvio: ${report.tipoDesvio} - ${report.statusAcao}</p>
+                            </div>
+                        ` : ''}
+                        ${imageHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function deleteReport(reportId) {
+            if (confirm('Tem certeza que deseja excluir este relatório?')) {
+                APP_CONFIG.reports = APP_CONFIG.reports.filter(r => r.id !== reportId);
+                saveLocalData();
+                
+                // Excluir da nuvem se aplicável
+                if (APP_CONFIG.useFirebase) {
+                    try {
+                        await APP_CONFIG.firestore.collection('reports').doc(reportId).delete();
+                        // Excluir fotos do storage
+                        await deleteReportPhotos(reportId);
+                    } catch (error) {
+                        console.error('Erro ao excluir da nuvem:', error);
+                    }
+                }
+                
+                displayReports();
+                showNotification('🗑️ Relatório excluído', 'info');
+            }
+        }
+
+        async function deleteReportPhotos(reportId) {
+            if (!APP_CONFIG.useFirebase) return;
+            
+            try {
+                const storageRef = APP_CONFIG.storage.ref();
+                const reportPhotosRef = storageRef.child(`reports/${reportId}`);
+                const photos = await reportPhotosRef.listAll();
+                
+                for (const photo of photos.items) {
+                    await photo.delete();
+                }
+            } catch (error) {
+                console.error('Erro ao excluir fotos:', error);
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('reportForm').reset();
+            document.getElementById('previewDesvio').innerHTML = '';
+            document.getElementById('previewSolucao').innerHTML = '';
+        }
+
+        // Gerenciamento da Nuvem
+        function showCloudManager() {
+            updateSyncStats();
+            document.getElementById('cloudManagerModal').classList.remove('hidden');
+        }
+
+        function closeCloudManager() {
+            document.getElementById('cloudManagerModal').classList.add('hidden');
+        }
+
+        function updateSyncStats() {
+            document.getElementById('localReportsCount').textContent = APP_CONFIG.reports.length;
+            document.getElementById('cloudReportsCount').textContent = APP_CONFIG.reports.filter(r => r.synced).length;
+            document.getElementById('lastSyncTime').textContent = 
+                APP_CONFIG.reports.length > 0 ? 
+                new Date(APP_CONFIG.reports[0].updatedAt).toLocaleString('pt-BR') : 'Nunca';
+            document.getElementById('syncStatusDetail').textContent = 
+                APP_CONFIG.useFirebase ? 'Conectado' : 'Desconectado';
+            
+            if (APP_CONFIG.currentUser) {
+                document.getElementById('accountEmail').textContent = APP_CONFIG.currentUser.email;
+                document.getElementById('accountUid').textContent = APP_CONFIG.currentUser.uid;
+                document.getElementById('accountCreated').textContent = 
+                    APP_CONFIG.currentUser.metadata?.creationTime || 'N/A';
+                document.getElementById('accountLastLogin').textContent = 
+                    APP_CONFIG.currentUser.metadata?.lastSignInTime || 'N/A';
+            }
+        }
+
+        function forceSync() {
+            if (APP_CONFIG.useFirebase) {
+                syncData();
+            } else {
+                showNotification('⚠️ Modo local - sem sincronização', 'warning');
+            }
+        }
+
+        function showSyncStats() {
+            showCloudManager();
+        }
+
+        // Utilitários
+        function showNotification(message, type = 'info') {
+            // Implementar sistema de notificações
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+
+        function processPendingSync() {
+            // Implementar processamento de pendências
+            return Promise.resolve();
+        }
+
+        // Inicializar preview de fotos
+        function setupPhotoPreview() {
+            document.getElementById('fotoDesvio').addEventListener('change', function(e) {
+                previewPhoto(e.target, 'previewDesvio');
+            });
+            document.getElementById('fotoSolucao').addEventListener('change', function(e) {
+                previewPhoto(e.target, 'previewSolucao');
+            });
+        }
+
+        function previewPhoto(input, previewId) {
+            const preview = document.getElementById(previewId);
+            preview.innerHTML = '';
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'photo-preview mt-2';
+                    preview.appendChild(img);
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Função para mostrar/ocultar campos condicionais do TST
+        function toggleTSTFields() {
+            const tstPresente = document.getElementById('tstPresente').value;
+            const tstAusenteFields = document.getElementById('tstAusenteFields');
+            const tstPresenteFields = document.getElementById('tstPresenteFields');
+            
+            // Ocultar todos os campos primeiro
+            tstAusenteFields.classList.add('hidden');
+            tstPresenteFields.classList.add('hidden');
+            
+            // Mostrar campos específicos baseado na seleção
+            if (tstPresente === 'ausente') {
+                tstAusenteFields.classList.remove('hidden');
+            } else if (tstPresente === 'sim') {
+                tstPresenteFields.classList.remove('hidden');
+            }
+        }
+
+        // Função para mostrar/ocultar campos condicionais de desvio crítico
+        function toggleDesvioFields() {
+            const houveDesvio = document.getElementById('houveDesvio').value;
+            const desvioFields = document.getElementById('desvioFields');
+            
+            // Ocultar campos de desvio se não houver desvio
+            if (houveDesvio === 'sim') {
+                desvioFields.classList.remove('hidden');
+            } else {
+                desvioFields.classList.add('hidden');
+            }
+        }
+
+        // Funções do Modal de Detalhes do Relatório
+        function showReportDetails(reportId) {
+            const report = APP_CONFIG.reports.find(r => r.id === reportId);
+            if (!report) return;
+
+            const content = document.getElementById('reportDetailsContent');
+
+            let html = `
+                <div class="bg-blue-50 p-4 rounded-lg mb-6">
+                    <h3 class="text-lg font-semibold text-blue-800 mb-2">📍 Informações Gerais</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div><strong>Localização:</strong> ${report.localizacao}</div>
+                        <div><strong>Data/Hora:</strong> ${report.timestamp}</div>
+                        <div><strong>TST Presente:</strong> ${report.tstPresente === 'sim' ? '✅ Sim' : report.tstPresente === 'nao' ? '❌ Não' : '❌ Ausente'}</div>
+                        <div><strong>Status:</strong> ${report.synced ? '☁️ Sincronizado' : '📱 Pendente'}</div>
+                    </div>
+                </div>
+            `;
+
+            // Campos específicos para TST ausente
+            if (report.tstPresente === 'ausente') {
+                html += `
+                    <div class="bg-orange-50 p-4 rounded-lg mb-6">
+                        <h3 class="text-lg font-semibold text-orange-800 mb-2">⚠️ TST Ausente</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div><strong>1º dia da ausência:</strong> ${report.primeiroDiaAusencia || 'N/A'}</div>
+                            <div><strong>Dias ausente:</strong> ${report.diasAusente || 'N/A'}</div>
+                            <div><strong>Motivo:</strong> ${report.motivo || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Campos específicos para TST presente
+            if (report.tstPresente === 'sim') {
+                html += `
+                    <div class="bg-green-50 p-4 rounded-lg mb-6">
+                        <h3 class="text-lg font-semibold text-green-800 mb-2">✅ Atividades Realizadas</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div><strong>Boa Jornada Acompanhada:</strong> ${report.boaJornada || 0}</div>
+                            <div><strong>Inspeções RAC:</strong> ${report.inspecoesRAC || 0}</div>
+                            <div><strong>Inspeções ART/PTS/OMVE:</strong> ${report.inspecoesART || 0}</div>
+                            <div><strong>Outras Inspeções:</strong> ${report.outrasInspecoes || 0}</div>
+                            <div><strong>Interdições Críticas:</strong> ${report.interdicoesCriticas || 0}</div>
+                            <div><strong>N3 Registrados:</strong> ${report.n3Registrados || 0}</div>
+                            <div><strong>Ações Internas:</strong> ${report.acoesInternas || 0}</div>
+                            <div><strong>Ações para VALE:</strong> ${report.acoesVale || 0}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Informações de desvio crítico
+            if (report.houveDesvio === 'sim') {
+                html += `
+                    <div class="bg-red-50 p-4 rounded-lg mb-6">
+                        <h3 class="text-lg font-semibold text-red-800 mb-2">🚨 Desvio Crítico</h3>
+                        <div class="space-y-3 text-sm">
+                            <div><strong>Tipo de desvio:</strong> ${report.tipoDesvio || 'N/A'}</div>
+                            <div><strong>Descrição:</strong> ${report.descricaoDesvio || 'N/A'}</div>
+                            <div><strong>Local do desvio:</strong> ${report.localDesvio || 'N/A'}</div>
+                            <div><strong>Ação tomada:</strong> ${report.acaoTomada || 'N/A'}</div>
+                            <div><strong>Status da ação:</strong> ${report.statusAcao || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+
+                // Fotos do desvio
+                if (report.fotoDesvio || report.fotoSolucao) {
+                    html += `<div class="bg-gray-50 p-4 rounded-lg mb-6">`;
+                    html += `<h3 class="text-lg font-semibold text-gray-800 mb-4">📸 Fotos</h3>`;
+                    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+
+                    if (report.fotoDesvio) {
+                        html += `
+                            <div>
+                                <h4 class="font-medium text-gray-700 mb-2">Foto do Desvio</h4>
+                                <img src="${report.fotoDesvio}" alt="Foto do desvio" class="w-full h-48 object-cover rounded-lg border">
+                            </div>
+                        `;
+                    }
+
+                    if (report.fotoSolucao) {
+                        html += `
+                            <div>
+                                <h4 class="font-medium text-gray-700 mb-2">Foto da Solução</h4>
+                                <img src="${report.fotoSolucao}" alt="Foto da solução" class="w-full h-48 object-cover rounded-lg border">
+                            </div>
+                        `;
+                    }
+
+                    html += `</div></div>`;
+                }
+            }
+
+            content.innerHTML = html;
+            content.setAttribute('data-report-id', reportId);
+            document.getElementById('reportDetailsModal').classList.remove('hidden');
+        }
+
+        function closeReportDetails() {
+            document.getElementById('reportDetailsModal').classList.add('hidden');
+        }
+
+        async function shareReportOnWhatsApp() {
+            // Get the current report from the modal context
+            const reportDetailsContent = document.getElementById('reportDetailsContent');
+            const reportId = reportDetailsContent.getAttribute('data-report-id');
+            const report = APP_CONFIG.reports.find(r => r.id === reportId);
+            if (!report) return;
+
+            let message = `📋 *RELATÓRIO DE SEGURANÇA*\n\n`;
+            message += `📍 *Localização:* ${report.localizacao}\n`;
+            message += `📅 *Data/Hora:* ${report.timestamp}\n`;
+            message += `👷 *TST Presente:* ${report.tstPresente === 'sim' ? 'Sim' : 'Não'}\n\n`;
+
+            if (report.tstPresente === 'ausente') {
+                message += `⚠️ *TST AUSENTE*\n`;
+                message += `📅 1º dia da ausência: ${report.primeiroDiaAusencia || 'N/A'}\n`;
+                message += `📊 Dias ausente: ${report.diasAusente || 'N/A'}\n`;
+                message += `📝 Motivo: ${report.motivo || 'N/A'}\n\n`;
+            }
+
+            if (report.tstPresente === 'sim') {
+                message += `✅ *ATIVIDADES REALIZADAS*\n`;
+                message += `🎯 Boa Jornada: ${report.boaJornada || 0}\n`;
+                message += `🔍 Inspeções RAC: ${report.inspecoesRAC || 0}\n`;
+                message += `📋 Inspeções ART/PTS/OMVE: ${report.inspecoesART || 0}\n`;
+                message += `🔧 Outras Inspeções: ${report.outrasInspecoes || 0}\n`;
+                message += `🚫 Interdições Críticas: ${report.interdicoesCriticas || 0}\n`;
+                message += `📊 N3 Registrados: ${report.n3Registrados || 0}\n`;
+                message += `🏢 Ações Internas: ${report.acoesInternas || 0}\n`;
+                message += `🏭 Ações VALE: ${report.acoesVale || 0}\n\n`;
+            }
+
+            if (report.houveDesvio === 'sim') {
+                message += `🚨 *DESVIO CRÍTICO*\n`;
+                message += `📋 Tipo: ${report.tipoDesvio || 'N/A'}\n`;
+                message += `📝 Descrição: ${report.descricaoDesvio || 'N/A'}\n`;
+                message += `📍 Local: ${report.localDesvio || 'N/A'}\n`;
+                message += `🔧 Ação tomada: ${report.acaoTomada || 'N/A'}\n`;
+                message += `📊 Status: ${report.statusAcao || 'N/A'}\n\n`;
+            }
+
+            message += `*Diário de Bordo Técnico das Contratadas*`;
+
+            // Check if there are images
+            const hasImages = !!(report.fotoDesvio || report.fotoSolucao);
+
+            // Always use WhatsApp URL with text message
+            if (hasImages) {
+                message += `\n\n📸 *IMPORTANTE:* Este relatório contém ${report.fotoDesvio && report.fotoSolucao ? '2' : '1'} imagem(ns). `;
+                message += `Após abrir o WhatsApp, clique no ícone de clipe 📎 para anexar as imagens baixadas abaixo.`;
+            }
+
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
+            // Open WhatsApp with the complete text message
+            window.open(whatsappUrl, '_blank');
+
+            // Show download buttons for images immediately if they exist
+            if (hasImages) {
+                createImageDownloadButtons(report);
+                showNotification('📱 WhatsApp aberto com o texto. Baixe as imagens e anexe manualmente.', 'info');
+            } else {
+                showNotification('📱 WhatsApp aberto com o relatório!', 'success');
+            }
+        }
+
+        function createImageDownloadButtons(report) {
+            const container = document.getElementById('imageDownloadButtons');
+            container.innerHTML = '';
+
+            if (report.fotoDesvio) {
+                const downloadBtn1 = document.createElement('button');
+                downloadBtn1.innerHTML = '⬇️ Baixar Foto Desvio';
+                downloadBtn1.className = 'bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 px-3 rounded-lg transition duration-200';
+                downloadBtn1.onclick = () => downloadImage(report.fotoDesvio, 'foto_desvio.jpg');
+                container.appendChild(downloadBtn1);
+            }
+
+            if (report.fotoSolucao) {
+                const downloadBtn2 = document.createElement('button');
+                downloadBtn2.innerHTML = '⬇️ Baixar Foto Solução';
+                downloadBtn2.className = 'bg-green-600 hover:bg-green-700 text-white text-sm py-2 px-3 rounded-lg transition duration-200';
+                downloadBtn2.onclick = () => downloadImage(report.fotoSolucao, 'foto_solucao.jpg');
+                container.appendChild(downloadBtn2);
+            }
+        }
+
+        function downloadImage(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showNotification(`✅ ${filename} baixada com sucesso!`, 'success');
+        }
+
+        // Inicializar quando DOM estiver pronto
+        setTimeout(() => {
+            setupPhotoPreview();
+            setupFormToggling();
+            console.log('✅ Aplicativo inicializado com sucesso!');
+        }, 100);
+
+        // Funções para alternar entre formulários
+        function setupFormToggling() {
+            document.getElementById('btnRelatorio').addEventListener('click', function() {
+                showForm('relatorio');
+            });
+
+            document.getElementById('btnDesviosCriticos').addEventListener('click', function() {
+                showForm('desviosCriticos');
+            });
+
+            // Event listener para o formulário de desvios críticos
+            document.getElementById('desviosCriticosForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await saveDesvioCritico();
+            });
+
+            // Event listener para limpar formulário de desvios críticos
+            document.getElementById('btnLimparDesvio').addEventListener('click', function() {
+                clearDesvioCriticoForm();
+            });
+        }
+
+        function showForm(formType) {
+            const formRelatorio = document.getElementById('formRelatorio');
+            const formDesvios = document.getElementById('formDesviosCriticos');
+            const btnRelatorio = document.getElementById('btnRelatorio');
+            const btnDesvios = document.getElementById('btnDesviosCriticos');
+
+            if (formType === 'relatorio') {
+                formRelatorio.classList.remove('hidden');
+                formDesvios.classList.add('hidden');
+                btnRelatorio.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                btnRelatorio.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                btnDesvios.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                btnDesvios.classList.remove('bg-red-600', 'hover:bg-red-700');
+            } else if (formType === 'desviosCriticos') {
+                formRelatorio.classList.add('hidden');
+                formDesvios.classList.remove('hidden');
+                btnDesvios.classList.add('bg-red-600', 'hover:bg-red-700');
+                btnDesvios.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                btnRelatorio.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                btnRelatorio.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            }
+        }
+
+        async function saveDesvioCritico() {
+            const desvio = {
+                id: 'desvio_' + Date.now(),
+                type: 'desvioCritico',
+                timestamp: new Date().toLocaleString('pt-BR'),
+                data: document.getElementById('dcData').value,
+                local: document.getElementById('dcLocal').value,
+                area: document.getElementById('dcArea').value,
+                responsavel: document.getElementById('dcResponsavel').value,
+                emitente: document.getElementById('dcEmitente').value,
+                descricao: document.getElementById('dcDescricao').value,
+                classificacao: document.getElementById('dcClassificacao').value,
+                rac: document.getElementById('dcRAC').value,
+                recomendacao: document.getElementById('dcRecomendacao').value,
+                acoesImediatas: document.getElementById('dcAcoesImediatas').value,
+                principaisAprendizados: document.getElementById('dcPrincipaisAprendizados').value,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                synced: false
+            };
+
+            // Salvar desvio crítico
+            APP_CONFIG.reports.push(desvio);
+            saveLocalData();
+
+            // Tentar sincronizar se online
+            if (navigator.onLine && APP_CONFIG.useFirebase) {
+                await saveReportToCloud(desvio);
+            }
+
+            displayReports();
+            clearDesvioCriticoForm();
+
+            showNotification('✅ Desvio crítico salvo' + (APP_CONFIG.useFirebase ? ' e sincronizado' : ''), 'success');
+        }
+
+        function clearDesvioCriticoForm() {
+            document.getElementById('desviosCriticosForm').reset();
+        }
+
+        // Função para salvar o relatório atual como PDF
+        async function saveReportAsPDF() {
+            const content = document.getElementById('reportDetailsContent');
+            if (!content) return;
+
+            // Clonar o conteúdo para manipulação
+            const clone = content.cloneNode(true);
+
+            // Remover botões e elementos interativos do clone
+            const buttons = clone.querySelectorAll('button, .imageDownloadButtons, .loading-spinner');
+            buttons.forEach(btn => btn.remove());
+
+            // Ajustar imagens para tamanho adequado no PDF
+            const images = clone.querySelectorAll('img');
+            images.forEach(img => {
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.style.pageBreakInside = 'avoid';
+            });
+
+            // Configurações do html2pdf
+            const opt = {
+                margin:       0.5,
+                filename:     'relatorio-seguranca.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, logging: false, dpi: 192, letterRendering: true },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Gerar PDF
+            html2pdf().set(opt).from(clone).save();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+- [ ] Add editProfileModal div with form fields for profile editing
+- [ ] Implement showEditProfile() function to display the modal and load current profile data
+- [ ] Implement loadProfileData() to fetch profile data from Firestore or localStorage
+- [ ] Implement saveProfile() to save the profile data
+- [ ] Update userInfo in header after saving
+- [ ] Add conditional logic for showing motivo and date fields when status is 'ausente'
+- [ ] Test the functionality

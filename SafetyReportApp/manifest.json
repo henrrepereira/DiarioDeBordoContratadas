@@ -1,0 +1,13 @@
+{
+  "name": "Diário de Bordo Técnico das Contratadas",
+  "short_name": "Safety Report",
+  "description": "Aplicativo para relatórios de segurança com suporte offline",
+  "start_url": "./APP - Copia (3) - Copia.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": ".",
+  "lang": "pt-BR",
+  "categories": ["productivity", "business"]
+}

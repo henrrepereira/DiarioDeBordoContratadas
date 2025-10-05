@@ -1,0 +1,26 @@
+{
+  "name": "Relatório de Segurança",
+  "short_name": "Safety Reports",
+  "description": "Sistema de relatórios de segurança com sincronização em nuvem",
+  "start_url": "/safety-report-app-completo.html",
+  "display": "standalone",
+  "background_color": "#3b82f6",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192x192.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "lang": "pt-BR"
+}
