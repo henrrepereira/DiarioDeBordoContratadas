@@ -103,160 +103,174 @@
             100% { transform: rotate(360deg); }
         }
     </style>
-    <script>
-        // Variáveis globais
-        let firebaseApp = null;
-        let firestore = null;
-        let auth = null;
-        let storage = null;
-        let currentUser = null;
-        let isOffline = false;
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Indicadores de Status -->
+    <div id="offlineIndicator" class="offline-indicator">
+        📱 Modo Offline - Dados salvos localmente
+    </div>
+    
+    <div id="syncIndicator" class="sync-indicator">
+        <span class="loading-spinner"></span> Sincronizando com a nuvem...
+    </div>
 
-        // Inicializa Firebase com as configurações do usuário
-        function initFirebase(config) {
-            try {
-                if (firebaseApp) {
-                    firebaseApp.delete();
-                }
-                firebaseApp = firebase.initializeApp(config);
-                firestore = firebaseApp.firestore();
-                auth = firebaseApp.auth();
-                storage = firebaseApp.storage();
+    <!-- Tela de Configuração Firebase -->
+    <div id="firebaseConfigScreen" class="min-h-screen flex items-center justify-center p-4 bg-gray-900 bg-opacity-50 fixed inset-0 z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl">⚙️</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Configuração do Firebase</h1>
+                <p class="text-gray-600 mt-2">Configure a conexão com a nuvem</p>
+            </div>
+            
+            <form id="firebaseConfigForm" class="space-y-6">
+                <div>
 
-                // Configura persistência offline
-                firestore.enablePersistence()
-                    .catch((err) => {
-                        console.warn('Persistência offline não habilitada:', err);
-                    });
+    <!-- Tela de Configuração Firebase -->
+    <div id="firebaseConfigScreen" class="min-h-screen flex items-center justify-center p-4 bg-gray-900 bg-opacity-50 fixed inset-0 z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl">⚙️</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Configuração do Firebase</h1>
+                <p class="text-gray-600 mt-2">Configure a conexão com a nuvem</p>
+            </div>
+            
+            <form id="firebaseConfigForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                    <input type="text" id="apiKey" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="Sua chave API do Firebase">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Auth Domain</label>
+                    <input type="text" id="authDomain" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ex: seu-projeto.firebaseapp.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Project ID</label>
+                    <input type="text" id="projectId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do seu projeto">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Storage Bucket</label>
+                    <input type="text" id="storageBucket" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ex: seu-projeto.appspot.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Messaging Sender ID</label>
+                    <input type="text" id="messagingSenderId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do remetente">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">App ID</label>
+                    <input type="text" id="appId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do aplicativo">
+                </div>
+                
+                <div id="configError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                </div>
+                
+                <div id="configSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                    ✅ Configuração salva! Conectando à nuvem...
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                    🔗 Conectar à Nuvem
+                </button>
+                
+                <div class="text-center">
+                    <button type="button" onclick="useLocalMode()" 
+                            class="text-gray-600 hover:text-gray-800 font-medium">
+                        ⚡ Usar modo local apenas
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-                // Observa estado de autenticação
-                auth.onAuthStateChanged(user => {
-                    currentUser = user;
-                    if (user) {
-                        showAppScreen();
-                        loadUserInfo();
-                        syncData();
-                    } else {
-                        showLoginScreen();
-                    }
-                });
+    <!-- Tela de Login -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl">🛡️</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Diário de Bordo Técnico das Contratadas</h1>
+                <p class="text-gray-600 mt-2">Coord gestão de processos</p>
+                <div id="cloudStatus" class="mt-2 text-sm text-green-600">
+                    ✅ Conectado à nuvem
+                </div>
+            </div>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="email" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="seu@email.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                    <input type="password" id="password" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Sua senha">
+                </div>
+                
+                <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                    ☁️ Entrar na Nuvem
+                </button>
+                
+                <div class="text-center">
+                    <button type="button" onclick="showRegistration()" 
+                            class="text-green-600 hover:text-green-800 font-medium">
+                        📝 Criar nova conta
+                    </button>
+                </div>
+                
+                <div class="text-center text-sm text-gray-600 mt-4">
+                    <p><strong>Ou use acesso local:</strong></p>
+                    <button type="button" onclick="useLocalAccess()" 
+                            class="text-orange-600 hover:text-orange-800 font-medium mt-2">
+                        📱 Acesso Local sem Nuvem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-                showLoginScreen();
-            } catch (error) {
-                console.error('Erro ao inicializar Firebase:', error);
-                alert('Erro ao conectar ao Firebase. Verifique as configurações.');
-            }
-        }
-
-        // Função para salvar configurações do Firebase e inicializar
-        document.getElementById('firebaseConfigForm').addEventListener('submit', e => {
-            e.preventDefault();
-            const config = {
-                apiKey: document.getElementById('apiKey').value.trim(),
-                authDomain: document.getElementById('authDomain').value.trim(),
-                projectId: document.getElementById('projectId').value.trim(),
-                storageBucket: document.getElementById('storageBucket').value.trim(),
-                messagingSenderId: document.getElementById('messagingSenderId').value.trim(),
-                appId: document.getElementById('appId').value.trim()
-            };
-            initFirebase(config);
-            document.getElementById('firebaseConfigScreen').style.display = 'none';
-        });
-
-        // Mostrar telas
-        function showLoginScreen() {
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('registrationScreen').style.display = 'none';
-            document.getElementById('appScreen').style.display = 'none';
-        }
-        function showRegistration() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('registrationScreen').style.display = 'flex';
-            document.getElementById('appScreen').style.display = 'none';
-        }
-        function showAppScreen() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('registrationScreen').style.display = 'none';
-            document.getElementById('appScreen').style.display = 'block';
-        }
-
-        // Login
-        document.getElementById('loginForm').addEventListener('submit', e => {
-            e.preventDefault();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            auth.signInWithEmailAndPassword(email, password)
-                .then(() => {
-                    document.getElementById('loginError').style.display = 'none';
-                })
-                .catch(error => {
-                    document.getElementById('loginError').textContent = error.message;
-                    document.getElementById('loginError').style.display = 'block';
-                });
-        });
-
-        // Registro
-        document.getElementById('registrationForm').addEventListener('submit', e => {
-            e.preventDefault();
-            const email = document.getElementById('emailCadastro').value.trim();
-            const password = document.getElementById('senhaCadastro').value;
-            const confirmPassword = document.getElementById('confirmarSenha').value;
-            if (password !== confirmPassword) {
-                alert('As senhas não coincidem.');
-                return;
-            }
-            auth.createUserWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    // Salvar dados adicionais do usuário no Firestore
-                    const user = userCredential.user;
-                    const userData = {
-                        nomeCompleto: document.getElementById('nomeCompleto').value.trim(),
-                        empresa: document.getElementById('empresa').value.trim(),
-                        contrato: document.getElementById('contrato').value.trim(),
-                        telefone: document.getElementById('telefone').value.trim(),
-                        estaDeFerias: document.getElementById('estaDeFerias').checked,
-                        dataInicioFerias: document.getElementById('dataInicioFerias').value,
-                        dataFimFerias: document.getElementById('dataFimFerias').value,
-                        demobilizado: document.getElementById('demobilizado').checked,
-                        email: email
-                    };
-                    return firestore.collection('usuarios').doc(user.uid).set(userData);
-                })
-                .then(() => {
-                    alert('Conta criada com sucesso! Faça login.');
-                    showLoginScreen();
-                })
-                .catch(error => {
-                    document.getElementById('registrationError').textContent = error.message;
-                    document.getElementById('registrationError').style.display = 'block';
-                });
-        });
-
-        // Logout
-        function logout() {
-            auth.signOut();
-        }
-
-        // Carregar informações do usuário
-        function loadUserInfo() {
-            if (!currentUser) return;
-            firestore.collection('usuarios').doc(currentUser.uid).get()
-                .then(doc => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        document.getElementById('userInfo').textContent = `Usuário: ${data.nomeCompleto} (${data.empresa || 'Sem empresa'})`;
-                    }
-                });
-        }
-
-        // Sincronização de dados (exemplo básico)
-        function syncData() {
-            if (!currentUser) return;
-            // Exemplo: carregar relatórios do Firestore
-            firestore.collection('relatorios').where('userId', '==', currentUser.uid)
-                .onSnapshot(snapshot => {
-                    // Atualizar UI com dados sincronizados
-                    console.log('Relatórios sincronizados:', snapshot.docs.map(doc => doc.data()));
-                    document.getElementById('syncText').textContent = 'Sincronizado';
-                }, error => {
-                    console.error('Erro na sincronização:', error);
+    <!-- Tela de Registro -->
+    <div id="registrationScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl">📝</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Criar Conta na Nuvem</h1>
+                <p class="text-gray-600 mt-2">Registre-se no sistema</p>
+            </div>
+            
+            <form id="registrationForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
+                    <input type="text" id="nomeCompleto" required 
