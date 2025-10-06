@@ -117,79 +117,7 @@
     </div>
 
     <!-- Tela de Configuração Firebase -->
-    <div id="firebaseConfigScreen" class="min-h-screen flex items-center justify-center p-4 bg-gray-900 bg-opacity-50 fixed inset-0 z-50">
-        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
-            <div class="text-center mb-8">
-                <div class="bg-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="text-white text-2xl">⚙️</span>
-                </div>
-                <h1 class="text-2xl font-bold text-gray-800">Configuração do Firebase</h1>
-                <p class="text-gray-600 mt-2">Configure a conexão com a nuvem</p>
-            </div>
-            
-            <form id="firebaseConfigForm" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
-                    <input type="text" id="apiKey" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                           placeholder="Sua chave API do Firebase">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Auth Domain</label>
-                    <input type="text" id="authDomain" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                           placeholder="ex: seu-projeto.firebaseapp.com">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Project ID</label>
-                    <input type="text" id="projectId" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                           placeholder="ID do seu projeto">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Storage Bucket</label>
-                    <input type="text" id="storageBucket" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                           placeholder="ex: seu-projeto.appspot.com">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Messaging Sender ID</label>
-                    <input type="text" id="messagingSenderId" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                           placeholder="ID do remetente">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">App ID</label>
-                    <input type="text" id="appId" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                           placeholder="ID do aplicativo">
-                </div>
-                
-                <div id="configError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                </div>
-                
-                <div id="configSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                    ✅ Configuração salva! Conectando à nuvem...
-                </div>
-                
-                <button type="submit" 
-                        class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
-                    🔗 Conectar à Nuvem
-                </button>
-                
-                <div class="text-center">
-                    <button type="button" onclick="useLocalMode()" 
-                            class="text-gray-600 hover:text-gray-800 font-medium">
-                        ⚡ Usar modo local apenas
-                    </button>
-                </div>
-            </form>
-        </div>
+    <div id="firebaseConfigScreen" class="hidden">
     </div>
 
     <!-- Tela de Login -->
@@ -914,7 +842,7 @@
     <script>
         // Configuração e Estado da Aplicação
         const APP_CONFIG = {
-            firebaseConfig: null,
+            firebaseConfig: window.firebaseConfig || null,
             useFirebase: false,
             currentUser: null,
             reports: [],
@@ -945,19 +873,14 @@
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🚀 Iniciando Sistema de Relatórios com Sincronização em Nuvem...');
             
-            // Verificar configuração salva
-            const savedConfig = localStorage.getItem('firebaseConfig');
-            if (savedConfig) {
-                try {
-                    APP_CONFIG.firebaseConfig = JSON.parse(savedConfig);
-                    await initializeFirebase();
-                    showLogin();
-                } catch (error) {
-                    console.error('Erro ao carregar configuração:', error);
-                    showFirebaseConfig();
-                }
-            } else {
-                showFirebaseConfig();
+            try {
+                await initializeFirebase();
+                showLogin();
+            } catch (error) {
+                console.error('Erro ao inicializar Firebase:', error);
+                APP_CONFIG.useFirebase = false;
+                showNotification('⚠️ Modo local ativado (erro no Firebase)', 'warning');
+                showLogin();
             }
             
             // Configurar detecção de offline
@@ -1002,8 +925,9 @@
 
         // Configuração do Firebase
         function showFirebaseConfig() {
-            document.getElementById('firebaseConfigScreen').classList.remove('hidden');
-            document.getElementById('loginScreen').classList.add('hidden');
+            // Tela de configuração desabilitada, pois usaremos configuração direta
+            // document.getElementById('firebaseConfigScreen').classList.remove('hidden');
+            // document.getElementById('loginScreen').classList.add('hidden');
         }
 
         function useLocalMode() {
@@ -1015,35 +939,7 @@
 
         document.getElementById('firebaseConfigForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const config = {
-                apiKey: document.getElementById('apiKey').value,
-                authDomain: document.getElementById('authDomain').value,
-                projectId: document.getElementById('projectId').value,
-                storageBucket: document.getElementById('storageBucket').value,
-                messagingSenderId: document.getElementById('messagingSenderId').value,
-                appId: document.getElementById('appId').value
-            };
-            
-            try {
-                // Validar configuração
-                APP_CONFIG.firebaseConfig = config;
-                const success = await initializeFirebase();
-                
-                if (success) {
-                    // Salvar configuração
-                    localStorage.setItem('firebaseConfig', JSON.stringify(config));
-                    document.getElementById('configSuccess').classList.remove('hidden');
-                    
-                    setTimeout(() => {
-                        document.getElementById('firebaseConfigScreen').classList.add('hidden');
-                        showLogin();
-                    }, 2000);
-                }
-            } catch (error) {
-                document.getElementById('configError').textContent = 'Erro na configuração: ' + error.message;
-                document.getElementById('configError').classList.remove('hidden');
-            }
+            // Formulário de configuração desabilitado, pois usaremos configuração direta
         });
 
         // Sistema de Autenticação
