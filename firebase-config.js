@@ -3,7 +3,7 @@ window.firebaseConfig = {
   apiKey: "AIzaSyBnit6_u1ZZG4Mg1Ma4q0OeTqeos5mJQ",
   authDomain: "diario-de-bordo-tecnico.firebaseapp.com",
   projectId: "diario-de-bordo-tecnico",
-  storageBucket: "diario-de-bordo-tecnico.firebasestorage.app",
+  storageBucket: "diario-de-bordo-tecnico.appspot.com",
   messagingSenderId: "398639660413",
   appId: "1:398639660413:web:ac182a4ea9e0f90edb2014",
   measurementId: "G-5HT50J72E2"
