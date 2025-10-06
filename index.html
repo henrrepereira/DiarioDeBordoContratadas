@@ -4,21 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diário de Bordo Técnico das Contratadas</title>
-    <link rel="manifest" href="manifest.json" />
     <script src="https://cdn.tailwindcss.com"></script>
-
+    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
 
-    <!-- Firebase Configuration -->
-    <script src="firebase-config.js"></script>
-    <script>
-        console.log('Arquivo firebase-config.js carregado com sucesso');
-    </script>
+    <!-- html2pdf library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- SheetJS library for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         /* Estilos PWA e offline */
@@ -117,7 +115,79 @@
     </div>
 
     <!-- Tela de Configuração Firebase -->
-    <div id="firebaseConfigScreen" class="hidden">
+    <div id="firebaseConfigScreen" class="min-h-screen flex items-center justify-center p-4 bg-gray-900 bg-opacity-50 fixed inset-0 z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl">⚙️</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Configuração do Firebase</h1>
+                <p class="text-gray-600 mt-2">Configure a conexão com a nuvem</p>
+            </div>
+            
+            <form id="firebaseConfigForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                    <input type="text" id="apiKey" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="Sua chave API do Firebase">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Auth Domain</label>
+                    <input type="text" id="authDomain" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ex: seu-projeto.firebaseapp.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Project ID</label>
+                    <input type="text" id="projectId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do seu projeto">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Storage Bucket</label>
+                    <input type="text" id="storageBucket" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ex: seu-projeto.appspot.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Messaging Sender ID</label>
+                    <input type="text" id="messagingSenderId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do remetente">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">App ID</label>
+                    <input type="text" id="appId" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           placeholder="ID do aplicativo">
+                </div>
+                
+                <div id="configError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                </div>
+                
+                <div id="configSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                    ✅ Configuração salva! Conectando à nuvem...
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                    🔗 Conectar à Nuvem
+                </button>
+                
+                <div class="text-center">
+                    <button type="button" onclick="useLocalMode()" 
+                            class="text-gray-600 hover:text-gray-800 font-medium">
+                        ⚡ Usar modo local apenas
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Tela de Login -->
@@ -237,24 +307,32 @@
                            placeholder="(11) 99999-9999">
                 </div>
 
-                <div class="flex items-center">
-                    <input type="checkbox" id="ferias" class="mr-2" onchange="toggleFerias()">
-                    <label class="text-sm font-medium text-gray-700">Está de férias?</label>
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="estaDeFerias" class="mr-2"
+                               onchange="toggleFeriasFields()">
+                        <span class="text-sm font-medium text-gray-700">Está de férias?</span>
+                    </label>
                 </div>
 
-                <div id="datasFeriasContainer" class="hidden space-y-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Datas de férias</label>
-                    <div class="grid grid-cols-2 gap-2">
+                <div id="feriasFields" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Data início das férias</label>
                         <input type="date" id="dataInicioFerias"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Data fim das férias</label>
                         <input type="date" id="dataFimFerias"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                     </div>
                 </div>
 
-                <div class="flex items-center">
-                    <input type="checkbox" id="demobilizado" class="mr-2">
-                    <label class="text-sm font-medium text-gray-700">Demobilizado?</label>
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="demobilizado" class="mr-2">
+                        <span class="text-sm font-medium text-gray-700">Demobilizado?</span>
+                    </label>
                 </div>
                 
                 <div id="registrationError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -294,14 +372,14 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <button onclick="forceSync()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    <button onclick="forceSync()" class="text-blue-600 hover:text-blue-800 text-sm font-medium" aria-label="Sincronizar dados com a nuvem">
                         🔄 Sincronizar
                     </button>
                     <button onclick="showCloudManager()" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
                         ☁️ Gerenciar
                     </button>
-                    <button onclick="showUserProfile()" class="text-green-600 hover:text-green-800 text-sm font-medium">
-                        👤 Perfil
+                    <button onclick="showEditProfile()" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                        👤 Editar Perfil
                     </button>
                     <button onclick="logout()" class="text-red-600 hover:text-red-800 font-medium">
                         Sair
@@ -418,10 +496,9 @@
                         </div>
 
                         <div class="pt-4">
-                            <label for="racSelect" class="block text-sm font-medium text-gray-700 mb-2">RAC</label>
-                            <select id="racSelect" name="racsInspecionados" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="">Selecione</option>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">RAC</label>
+                            <select id="rac" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Selecione o RAC</option>
                                 <option value="RAC 01 - Trabalho em Altura">RAC 01 - Trabalho em Altura</option>
                                 <option value="RAC 02 - Veículos Automotores Leves">RAC 02 - Veículos Automotores Leves</option>
                                 <option value="RAC 03 - Operação de Equipamentos Móveis">RAC 03 - Operação de Equipamentos Móveis</option>
@@ -567,11 +644,10 @@
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                                    placeholder="Classificação do desvio">
                         </div>
-                        <div class="md:col-span-2">
-                            <label for="dcRacSelect" class="block font-semibold text-gray-700 mb-1">RAC Relacionado</label>
-                            <select id="dcRacSelect" name="dcRacsRelacionados" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
-                                <option value="">Selecione</option>
+                        <div>
+                            <label class="block font-semibold text-gray-700 mb-1">RAC</label>
+                            <select id="dcRAC" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                                <option value="">Selecione o RAC</option>
                                 <option value="RAC 01 - Trabalho em Altura">RAC 01 - Trabalho em Altura</option>
                                 <option value="RAC 02 - Veículos Automotores Leves">RAC 02 - Veículos Automotores Leves</option>
                                 <option value="RAC 03 - Operação de Equipamentos Móveis">RAC 03 - Operação de Equipamentos Móveis</option>
@@ -589,9 +665,12 @@
                         </div>
                         <div class="md:col-span-2">
                             <label class="block font-semibold text-gray-700 mb-1">Recomendação Comitê pela Vida (S/N)</label>
-                            <input type="text" id="dcRecomendacao" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                                   placeholder="Recomendação do comitê">
+                            <select id="dcRecomendacao" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                                <option value="">Selecione</option>
+                                <option value="S">Sim</option>
+                                <option value="N">Não</option>
+                            </select>
                         </div>
                         <div class="md:col-span-2">
                             <label class="block font-semibold text-gray-700 mb-1">Ações Imediatas</label>
@@ -635,14 +714,9 @@
                     </div>
                 </div>
                 
-            <div id="savedReports" class="space-y-3">
-                <p class="text-gray-500 text-center py-8">Nenhum relatório salvo</p>
-            </div>
-
-            <!-- Card detalhado para Desvios Críticos -->
-            <div id="criticalDeviationCards" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
-                <!-- Conteúdo do card será gerado dinamicamente -->
-            </div>
+                <div id="savedReports" class="space-y-3">
+                    <p class="text-gray-500 text-center py-8">Nenhum relatório salvo</p>
+                </div>
             </div>
         </div>
     </div>
@@ -653,7 +727,7 @@
             <div class="p-6">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-gray-800">☁️ Gerenciamento da Nuvem</h2>
-                    <button onclick="closeCloudManager()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                    <button onclick="closeCloudManager()" class="text-gray-500 hover:text-gray-700 text-2xl" aria-label="Fechar">&times;</button>
                 </div>
 
                 <div class="space-y-6">
@@ -718,96 +792,6 @@
         </div>
     </div>
 
-    <!-- Modal de Perfil do Usuário -->
-    <div id="userProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-gray-800">👤 Perfil do Usuário</h2>
-                    <button onclick="closeUserProfile()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-                </div>
-
-                <form id="userProfileForm" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
-                            <input type="text" id="profileNome" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                   placeholder="Seu nome completo">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                            <input type="email" id="profileEmail" readonly
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                                   placeholder="seu@email.com">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Empresa</label>
-                            <input type="text" id="profileEmpresa"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                   placeholder="Sua empresa">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Contrato</label>
-                            <input type="text" id="profileContrato"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                   placeholder="Número do contrato">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
-                            <input type="tel" id="profileTelefone"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                   placeholder="(11) 99999-9999">
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <div class="flex items-center">
-                                <input type="checkbox" id="profileFerias" class="mr-2" onchange="toggleProfileFerias()">
-                                <label class="text-sm font-medium text-gray-700">Está de férias?</label>
-                            </div>
-                        </div>
-
-                        <div id="profileDatasFeriasContainer" class="hidden md:col-span-2 space-y-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Datas de férias</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                <input type="date" id="profileDataInicioFerias"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                                <input type="date" id="profileDataFimFerias"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                            </div>
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <div class="flex items-center">
-                                <input type="checkbox" id="profileDemobilizado" class="mr-2">
-                                <label class="text-sm font-medium text-gray-700">Demobilizado?</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="profileError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    </div>
-
-                    <div id="profileSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                    </div>
-
-                    <div class="flex gap-3 pt-4 border-t">
-                        <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
-                            💾 Salvar Perfil
-                        </button>
-                        <button type="button" onclick="closeUserProfile()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
-                            Cancelar
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal de Detalhes do Relatório -->
     <div id="reportDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -839,10 +823,116 @@
         </div>
     </div>
 
+    <!-- Modal de Edição de Perfil -->
+    <div id="editProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800">👤 Editar Perfil</h2>
+                    <button onclick="closeEditProfile()" class="text-gray-500 hover:text-gray-700 text-2xl" aria-label="Fechar">&times;</button>
+                </div>
+
+                <form id="editProfileForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                        <input type="text" id="profileNome" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600" placeholder="Nome completo">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Empresa</label>
+                        <input type="text" id="profileEmpresa" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="Nome da empresa">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Contrato</label>
+                        <input type="text" id="profileContrato" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="Número do contrato">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+                        <input type="tel" id="profileTelefone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="(11) 99999-9999">
+                    </div>
+
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="profileEstaDeFerias" class="mr-2" onchange="toggleProfileFeriasFields()">
+                            <span class="text-sm font-medium text-gray-700">Está de férias?</span>
+                        </label>
+                    </div>
+
+                    <div id="profileFeriasFields" class="hidden space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Data início das férias</label>
+                            <input type="date" id="profileDataInicioFerias" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Data fim das férias</label>
+                            <input type="date" id="profileDataFimFerias" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="profileDemobilizado" class="mr-2">
+                            <span class="text-sm font-medium text-gray-700">Demobilizado?</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                        <select id="profileStatus" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" onchange="toggleProfileFields()">
+                            <option value="">Selecione o status</option>
+                            <option value="ativo">Ativo</option>
+                            <option value="ausente">Ausente</option>
+                            <option value="desmobilizado">Desmobilizado</option>
+                        </select>
+                    </div>
+
+                    <div id="ausenteFields" class="hidden space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Motivo da ausência</label>
+                            <select id="motivoAusencia" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                                <option value="">Selecione o motivo</option>
+                                <option value="folga">Folga</option>
+                                <option value="ferias">Férias</option>
+                                <option value="treinamento">Treinamento</option>
+                                <option value="saude">Saúde</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Data início da ausência</label>
+                            <input type="date" id="dataInicioAusencia" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Data fim da ausência</label>
+                            <input type="date" id="dataFimAusencia" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+                    </div>
+
+                    <div id="profileError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    </div>
+
+                    <div id="profileSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                            💾 Salvar Perfil
+                        </button>
+                        <button type="button" onclick="closeEditProfile()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuração e Estado da Aplicação
         const APP_CONFIG = {
-            firebaseConfig: window.firebaseConfig || null,
+            firebaseConfig: null,
             useFirebase: false,
             currentUser: null,
             reports: [],
@@ -850,215 +940,30 @@
             syncInterval: null
         };
 
-        // Lista completa de RACs
-        const RAC_LIST = [
-            'RAC 01 - Trabalho em Altura',
-            'RAC 02 - Veículos Automotores Leves',
-            'RAC 03 - Operação de Equipamentos Móveis',
-            'RAC 04 - Bloqueio, Identificação e Zero Energia',
-            'RAC 05 - Içamento de Carga',
-            'RAC 06 - Espaço Confinado',
-            'RAC 07 - Proteção de Máquinas',
-            'RAC 08 - Atividades no Terreno',
-            'RAC 09 - Explosivos',
-            'RAC 10 - Trabalhos em Eletricidade',
-            'RAC 11 - Metal Líquido',
-            'RAC 12 - Trabalho a Quente',
-            'RAC 13 - Abertura de Linhas e Equipamentos'
-        ];
-
-        // Funções para seleção de RACs
-
         // Inicialização da Aplicação
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🚀 Iniciando Sistema de Relatórios com Sincronização em Nuvem...');
-
-            try {
-                await initializeFirebase();
-                showLogin();
-            } catch (error) {
-                console.error('Erro ao inicializar Firebase:', error);
-                APP_CONFIG.useFirebase = false;
-                showNotification('⚠️ Modo local ativado (erro no Firebase)', 'warning');
-                showLogin();
+            
+            // Verificar configuração salva
+            const savedConfig = localStorage.getItem('firebaseConfig');
+            if (savedConfig) {
+                try {
+                    APP_CONFIG.firebaseConfig = JSON.parse(savedConfig);
+                    await initializeFirebase();
+                    showLogin();
+                } catch (error) {
+                    console.error('Erro ao carregar configuração:', error);
+                    showFirebaseConfig();
+                }
+            } else {
+                showFirebaseConfig();
             }
-
+            
             // Configurar detecção de offline
             setupOfflineDetection();
-
+            
             // Carregar dados locais
             loadLocalData();
-
-            // Adicionar event listeners após DOM estar carregado
-            // Login com Firebase
-            document.getElementById('loginForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-                const errorDiv = document.getElementById('loginError');
-
-                errorDiv.classList.add('hidden');
-
-                try {
-                    if (APP_CONFIG.useFirebase) {
-                        const userCredential = await APP_CONFIG.auth.signInWithEmailAndPassword(email, password);
-                        console.log('✅ Login bem-sucedido');
-                        showApp();
-                    } else {
-                        // Modo local
-                        useLocalAccess();
-                    }
-                } catch (error) {
-                    console.error('Erro detalhado no login:', error);
-                    errorDiv.textContent = 'Erro no login: ' + error.message;
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-
-            // Registro de nova conta
-            document.getElementById('registrationForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                const email = document.getElementById('emailCadastro').value;
-                const password = document.getElementById('senhaCadastro').value;
-                const confirmarSenha = document.getElementById('confirmarSenha').value;
-                const nome = document.getElementById('nomeCompleto').value;
-                const empresa = document.getElementById('empresa').value;
-                const errorDiv = document.getElementById('registrationError');
-                const successDiv = document.getElementById('registrationSuccess');
-
-                errorDiv.classList.add('hidden');
-                successDiv.classList.add('hidden');
-
-                if (password !== confirmarSenha) {
-                    errorDiv.textContent = 'As senhas não coincidem';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-
-                try {
-                    if (APP_CONFIG.useFirebase) {
-                        const userCredential = await APP_CONFIG.auth.createUserWithEmailAndPassword(email, password);
-
-                        // Atualizar perfil do usuário
-                        await userCredential.user.updateProfile({
-                            displayName: nome
-                        });
-
-                        // Salvar informações adicionais no Firestore
-                        await APP_CONFIG.firestore.collection('users').doc(userCredential.user.uid).set({
-                            nome: nome,
-                            email: email,
-                            empresa: empresa,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-
-                        successDiv.textContent = 'Conta criada com sucesso! Redirecionando...';
-                        successDiv.classList.remove('hidden');
-
-                        setTimeout(() => {
-                            showLogin();
-                        }, 2000);
-                    } else {
-                        successDiv.textContent = 'Modo local: conta criada localmente';
-                        successDiv.classList.remove('hidden');
-                        setTimeout(() => {
-                            showLogin();
-                        }, 2000);
-                    }
-                } catch (error) {
-                    errorDiv.textContent = 'Erro ao criar conta: ' + error.message;
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-
-            // Gerenciamento de Relatórios
-            document.getElementById('reportForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                const report = {
-                    id: 'local_' + Date.now(),
-                    timestamp: new Date().toLocaleString('pt-BR'),
-                    localizacao: document.getElementById('localizacao').value,
-                    tstPresente: document.getElementById('tstPresente').value,
-                    boaJornada: parseInt(document.getElementById('boaJornada').value) || 0,
-                    inspecoesRAC: parseInt(document.getElementById('inspecoesRAC').value) || 0,
-                    inspecoesART: parseInt(document.getElementById('inspecoesART').value) || 0,
-                    outrasInspecoes: parseInt(document.getElementById('outrasInspecoes').value) || 0,
-                    interdicoesCriticas: parseInt(document.getElementById('interdicoesCriticas').value) || 0,
-                    n3Registrados: parseInt(document.getElementById('n3Registrados').value) || 0,
-                    acoesInternas: parseInt(document.getElementById('acoesInternas').value) || 0,
-                    acoesVale: parseInt(document.getElementById('acoesVale').value) || 0,
-                    racsInspecionados: [document.getElementById('racSelect').value].filter(Boolean),
-                    houveDesvio: document.getElementById('houveDesvio').value,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    synced: false
-                };
-
-                // Adicionar campos específicos se necessário
-                if (report.tstPresente === 'ausente') {
-                    report.primeiroDiaAusencia = document.getElementById('primeiroDiaAusencia').value;
-                    report.diasAusente = document.getElementById('diasAusente').value;
-                    report.motivo = document.getElementById('motivo').value;
-                }
-
-                if (document.getElementById('houveDesvio').value === 'sim') {
-                    report.houveDesvio = 'sim';
-                    report.tipoDesvio = document.getElementById('tipoDesvio').value;
-                    report.descricaoDesvio = document.getElementById('descricaoDesvio').value;
-                    report.localDesvio = document.getElementById('localDesvio').value;
-                    report.acaoTomada = document.getElementById('acaoTomada').value;
-                    report.statusAcao = document.getElementById('statusAcao').value;
-
-                    // Processar fotos se houver
-                    const fotoDesvio = document.getElementById('fotoDesvio').files[0];
-                    if (fotoDesvio) {
-                        report.fotoDesvio = await readFileAsDataURL(fotoDesvio);
-                    }
-
-                    const fotoSolucao = document.getElementById('fotoSolucao').files[0];
-                    if (fotoSolucao) {
-                        report.fotoSolucao = await readFileAsDataURL(fotoSolucao);
-                    }
-                }
-
-                // Salvar relatório
-                APP_CONFIG.reports.push(report);
-                saveLocalData();
-
-                // Tentar sincronizar se online
-                if (navigator.onLine && APP_CONFIG.useFirebase) {
-                    await saveReportToCloud(report);
-                }
-
-                displayReports();
-                clearForm();
-
-                showNotification('✅ Relatório salvo' + (APP_CONFIG.useFirebase ? ' e sincronizado' : ''), 'success');
-            });
-
-            // Event listener para o formulário de desvios críticos
-            document.getElementById('desviosCriticosForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                await saveDesvioCritico();
-            });
-
-            // Event listener para limpar formulário de desvios críticos
-            document.getElementById('btnLimparDesvio').addEventListener('click', function() {
-                clearDesvioCriticoForm();
-            });
-
-            // Botões para alternar formulários
-            document.getElementById('btnRelatorio').addEventListener('click', function() {
-                showForm('relatorio');
-            });
-
-            document.getElementById('btnDesviosCriticos').addEventListener('click', function() {
-                showForm('desviosCriticos');
-            });
         });
 
         // Firebase Initialization
@@ -1074,10 +979,30 @@
                 APP_CONFIG.useFirebase = true;
                 
                 // Configurar listener de autenticação
-                APP_CONFIG.auth.onAuthStateChanged((user) => {
+                APP_CONFIG.auth.onAuthStateChanged(async (user) => {
                     if (user) {
                         console.log('👤 Usuário autenticado:', user.email);
-                        APP_CONFIG.currentUser = user;
+                    APP_CONFIG.currentUser = user;
+
+                    // Fetch additional user data from Firestore
+                    try {
+                        const userDoc = await APP_CONFIG.firestore.collection('users').doc(user.uid).get();
+                        if (userDoc.exists) {
+                            const userData = userDoc.data();
+                            APP_CONFIG.currentUser.nome = userData.nome || null;
+                            APP_CONFIG.currentUser.email = userData.email || user.email || null;
+                            APP_CONFIG.currentUser.telefone = userData.telefone || null;
+                            APP_CONFIG.currentUser.contrato = userData.contrato || null;
+                            APP_CONFIG.currentUser.estaDeFerias = userData.estaDeFerias || false;
+                            APP_CONFIG.currentUser.dataInicioFerias = userData.dataInicioFerias || null;
+                            APP_CONFIG.currentUser.dataFimFerias = userData.dataFimFerias || null;
+                            APP_CONFIG.currentUser.demobilizado = userData.demobilizado || false;
+                            APP_CONFIG.currentUser.status = userData.status || null;
+                        }
+                    } catch (error) {
+                        console.error('Erro ao buscar dados do usuário:', error);
+                    }
+
                         startSyncService();
                     } else {
                         console.log('👤 Usuário não autenticado');
@@ -1096,9 +1021,27 @@
 
         // Configuração do Firebase
         function showFirebaseConfig() {
-            // Tela de configuração desabilitada, pois usaremos configuração direta
-            // document.getElementById('firebaseConfigScreen').classList.remove('hidden');
-            // document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('firebaseConfigScreen').classList.remove('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+
+            // Preencher com configuração padrão
+            const defaultConfig = {
+                apiKey: "AIzaSyBnit6_u1ZZG4Mg1Ma4q9c0OeTqeos5mJQ",
+                authDomain: "diario-de-bordo-tecnico.firebaseapp.com",
+                projectId: "diario-de-bordo-tecnico",
+                storageBucket: "diario-de-bordo-tecnico.firebasestorage.app",
+                messagingSenderId: "398639660413",
+                appId: "1:398639660413:web:ac182a4ea9e0f90edb2014",
+                measurementId: "G-5HT50J72E2"
+            };
+
+            document.getElementById('apiKey').value = defaultConfig.apiKey;
+            document.getElementById('authDomain').value = defaultConfig.authDomain;
+            document.getElementById('projectId').value = defaultConfig.projectId;
+            document.getElementById('storageBucket').value = defaultConfig.storageBucket;
+            document.getElementById('messagingSenderId').value = defaultConfig.messagingSenderId;
+            document.getElementById('appId').value = defaultConfig.appId;
+            document.getElementById('measurementId').value = defaultConfig.measurementId;
         }
 
         function useLocalMode() {
@@ -1110,7 +1053,35 @@
 
         document.getElementById('firebaseConfigForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            // Formulário de configuração desabilitado, pois usaremos configuração direta
+            
+            const config = {
+                apiKey: document.getElementById('apiKey').value,
+                authDomain: document.getElementById('authDomain').value,
+                projectId: document.getElementById('projectId').value,
+                storageBucket: document.getElementById('storageBucket').value,
+                messagingSenderId: document.getElementById('messagingSenderId').value,
+                appId: document.getElementById('appId').value
+            };
+            
+            try {
+                // Validar configuração
+                APP_CONFIG.firebaseConfig = config;
+                const success = await initializeFirebase();
+                
+                if (success) {
+                    // Salvar configuração
+                    localStorage.setItem('firebaseConfig', JSON.stringify(config));
+                    document.getElementById('configSuccess').classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        document.getElementById('firebaseConfigScreen').classList.add('hidden');
+                        showLogin();
+                    }, 2000);
+                }
+            } catch (error) {
+                document.getElementById('configError').textContent = 'Erro na configuração: ' + error.message;
+                document.getElementById('configError').classList.remove('hidden');
+            }
         });
 
         // Sistema de Autenticação
@@ -1199,6 +1170,13 @@
                         nome: nome,
                         email: email,
                         empresa: empresa,
+                        contrato: document.getElementById('contrato').value,
+                        telefone: document.getElementById('telefone').value,
+                        estaDeFerias: document.getElementById('estaDeFerias').checked,
+                        dataInicioFerias: document.getElementById('dataInicioFerias').value,
+                        dataFimFerias: document.getElementById('dataFimFerias').value,
+                        demobilizado: document.getElementById('demobilizado').checked,
+                        status: 'ativo', // Status padrão para novos usuários
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                         lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                     });
@@ -1426,66 +1404,20 @@
         }
 
         // Funções da Interface
-        async function showApp() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('registrationScreen').classList.add('hidden');
-            document.getElementById('appScreen').classList.remove('hidden');
-
-            if (APP_CONFIG.currentUser) {
-                // Carregar dados do perfil e atualizar display
-                const profileData = await loadUserProfileData();
-                updateUserInfoDisplay(profileData);
-            }
-
-            displayReports();
-            updateSyncStats();
-        }
-
-        // Função para carregar dados do perfil
-        async function loadUserProfileData() {
-            if (!APP_CONFIG.currentUser) return null;
-
-            try {
-                if (APP_CONFIG.useFirebase) {
-                    // Carregar do Firestore
-                    const doc = await APP_CONFIG.firestore.collection('users').doc(APP_CONFIG.currentUser.uid).get();
-                    if (doc.exists) {
-                        return doc.data();
-                    }
-                } else {
-                    // Carregar do localStorage
-                    const localProfile = localStorage.getItem('userProfile');
-                    if (localProfile) {
-                        return JSON.parse(localProfile);
-                    }
+            function showApp() {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('registrationScreen').classList.add('hidden');
+                document.getElementById('appScreen').classList.remove('hidden');
+                
+                if (APP_CONFIG.currentUser) {
+                    const displayName = APP_CONFIG.currentUser.nome || APP_CONFIG.currentUser.displayName || APP_CONFIG.currentUser.email;
+                    document.getElementById('userInfo').textContent = 
+                        `${displayName} - ${APP_CONFIG.useFirebase ? 'Nuvem' : 'Local'}`;
                 }
-            } catch (error) {
-                console.error('Erro ao carregar dados do perfil:', error);
+                
+                displayReports();
+                updateSyncStats();
             }
-            return null;
-        }
-
-        // Função para atualizar display do usuário
-        function updateUserInfoDisplay(profileData) {
-            if (!APP_CONFIG.currentUser) return;
-
-            let displayText = APP_CONFIG.currentUser.displayName || APP_CONFIG.currentUser.email;
-
-            if (profileData) {
-                const details = [];
-                if (profileData.contrato) details.push(`Contrato: ${profileData.contrato}`);
-                if (profileData.telefone) details.push(`Tel: ${profileData.telefone}`);
-                if (profileData.ferias) details.push('De férias');
-
-                if (details.length > 0) {
-                    displayText += ` (${details.join(', ')})`;
-                }
-            }
-
-            displayText += ` - ${APP_CONFIG.useFirebase ? 'Nuvem' : 'Local'}`;
-
-            document.getElementById('userInfo').textContent = displayText;
-        }
 
         function logout() {
             if (APP_CONFIG.useFirebase && APP_CONFIG.auth) {
@@ -1542,22 +1474,13 @@
         // Gerenciamento de Relatórios
         document.getElementById('reportForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-
+            
             const report = {
                 id: 'local_' + Date.now(),
                 timestamp: new Date().toLocaleString('pt-BR'),
                 localizacao: document.getElementById('localizacao').value,
                 tstPresente: document.getElementById('tstPresente').value,
-                boaJornada: parseInt(document.getElementById('boaJornada').value) || 0,
-                inspecoesRAC: parseInt(document.getElementById('inspecoesRAC').value) || 0,
-                inspecoesART: parseInt(document.getElementById('inspecoesART').value) || 0,
-                outrasInspecoes: parseInt(document.getElementById('outrasInspecoes').value) || 0,
-                interdicoesCriticas: parseInt(document.getElementById('interdicoesCriticas').value) || 0,
-                n3Registrados: parseInt(document.getElementById('n3Registrados').value) || 0,
-                acoesInternas: parseInt(document.getElementById('acoesInternas').value) || 0,
-                acoesVale: parseInt(document.getElementById('acoesVale').value) || 0,
-                racsInspecionados: [document.getElementById('racSelect').value].filter(Boolean),
-                houveDesvio: document.getElementById('houveDesvio').value,
+                // ... outros campos do formulário
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 synced: false
@@ -1569,7 +1492,19 @@
                 report.diasAusente = document.getElementById('diasAusente').value;
                 report.motivo = document.getElementById('motivo').value;
             }
-            
+
+            if (report.tstPresente === 'sim') {
+                report.boaJornada = parseInt(document.getElementById('boaJornada').value) || 0;
+                report.inspecoesRAC = parseInt(document.getElementById('inspecoesRAC').value) || 0;
+                report.inspecoesART = parseInt(document.getElementById('inspecoesART').value) || 0;
+                report.outrasInspecoes = parseInt(document.getElementById('outrasInspecoes').value) || 0;
+                report.interdicoesCriticas = parseInt(document.getElementById('interdicoesCriticas').value) || 0;
+                report.n3Registrados = parseInt(document.getElementById('n3Registrados').value) || 0;
+                report.acoesInternas = parseInt(document.getElementById('acoesInternas').value) || 0;
+                report.acoesVale = parseInt(document.getElementById('acoesVale').value) || 0;
+                report.rac = document.getElementById('rac').value;
+            }
+
             if (document.getElementById('houveDesvio').value === 'sim') {
                 report.houveDesvio = 'sim';
                 report.tipoDesvio = document.getElementById('tipoDesvio').value;
@@ -1616,106 +1551,55 @@
 
         async function displayReports() {
             const container = document.getElementById('savedReports');
-            const criticalCardsContainer = document.getElementById('criticalDeviationCards');
             const reports = APP_CONFIG.reports.sort((a, b) =>
                 new Date(b.updatedAt) - new Date(a.updatedAt)
             );
 
-            // Filtrar relatórios que são desvios críticos
-            const criticalDeviations = reports.filter(r => r.type === 'desvioCritico' || r.houveDesvio === 'sim');
-            const regularReports = reports.filter(r => !(r.type === 'desvioCritico' || r.houveDesvio === 'sim'));
-
-            // Sempre mostrar relatórios regulares no design anterior
-            if (regularReports.length > 0) {
-                container.classList.remove('hidden');
-
-                container.innerHTML = regularReports.map(report => {
-                    let imageHtml = '';
-                    if (report.fotoDesvio || report.fotoSolucao) {
-                        imageHtml = '<div class="mt-3 grid grid-cols-2 gap-2">';
-                        if (report.fotoDesvio) {
-                            imageHtml += `<img src="${report.fotoDesvio}" alt="Foto do desvio" class="w-full h-16 object-cover rounded border">`;
-                        }
-                        if (report.fotoSolucao) {
-                            imageHtml += `<img src="${report.fotoSolucao}" alt="Foto da solução" class="w-full h-16 object-cover rounded border">`;
-                        }
-                        imageHtml += '</div>';
-                    }
-
-                    return `
-                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer" onclick="showReportDetails('${report.id}')">
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex-1">
-                                    <h3 class="font-medium text-gray-800">${report.localizacao}</h3>
-                                    <p class="text-sm text-gray-600">📅 ${report.timestamp}</p>
-                                    <p class="text-xs text-gray-500">${report.tstPresente === 'sim' ? '✅ TST Presente' : '❌ TST Ausente'}</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    ${report.synced ?
-                                        '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">☁️ Sincronizado</span>' :
-                                        '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">📱 Pendente</span>'
-                                    }
-                                    <button onclick="event.stopPropagation(); deleteReport('${report.id}')" class="text-red-600 hover:text-red-800 text-sm">
-                                        🗑️
-                                    </button>
-                                </div>
-                            </div>
-                            ${report.houveDesvio === 'sim' ? `
-                                <div class="bg-red-50 p-2 rounded mt-2">
-                                    <p class="text-xs text-red-800">⚠️ Desvio: ${report.tipoDesvio} - ${report.statusAcao}</p>
-                                </div>
-                            ` : ''}
-                            ${imageHtml}
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                container.classList.add('hidden');
-                container.innerHTML = '';
-            }
-
-            // Mostrar desvios críticos no design detalhado apenas se houver
-            if (criticalDeviations.length > 0) {
-                criticalCardsContainer.innerHTML = criticalDeviations.map(report => `
-                    <div class="border border-gray-300 rounded-lg p-6 mb-6 shadow-md">
-                        <h3 class="text-xl font-bold text-teal-700 mb-4">Priorização de Desvios Críticos | Inspeção Semanal de Segurança</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-2 text-sm text-gray-700">
-                                <p><strong>Data/Hora:</strong> ${report.data || report.timestamp || 'N/A'}</p>
-                                <p><strong>Local:</strong> ${report.local || 'N/A'}</p>
-                                <p><strong>Área:</strong> ${report.area || 'N/A'}</p>
-                                <p><strong>Responsável:</strong> ${report.responsavel || 'N/A'}</p>
-                                <p><strong>Emitente:</strong> ${report.emitente || 'N/A'}</p>
-                                <p><strong>Descrição do desvio:</strong> ${report.descricao || 'N/A'}</p>
-                                <p><strong>Classificação:</strong> ${report.classificacao || 'N/A'}</p>
-                                <p><strong>RAC:</strong> ${report.rac || 'N/A'}</p>
-                                <p><strong>Recomendação Comitê pela Vida?</strong> ${report.recomendacao || 'N/A'}</p>
-                            </div>
-                            <div class="space-y-4 text-sm text-gray-700">
-                                <div>
-                                    <h4 class="bg-teal-600 text-white font-semibold px-2 py-1 rounded">Ações Imediatas</h4>
-                                    <p class="p-2 border border-teal-600 rounded">${report.acoesImediatas || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <h4 class="bg-teal-600 text-white font-semibold px-2 py-1 rounded">Principais Aprendizados</h4>
-                                    <p class="p-2 border border-teal-600 rounded">${report.principaisAprendizados || 'N/A'}</p>
-                                </div>
-                                ${report.fotoDesvio ? `<img src="${report.fotoDesvio}" alt="Foto do desvio" class="w-full h-48 object-cover rounded-lg border">` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-                criticalCardsContainer.classList.remove('hidden');
-            } else {
-                criticalCardsContainer.classList.add('hidden');
-                criticalCardsContainer.innerHTML = '';
-            }
-
-            // Se não há nenhum relatório, mostrar mensagem
             if (reports.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum relatório salvo</p>';
-                container.classList.remove('hidden');
+                return;
             }
+
+            container.innerHTML = reports.map(report => {
+                let imageHtml = '';
+                if (report.fotoDesvio || report.fotoSolucao) {
+                    imageHtml = '<div class="mt-3 grid grid-cols-2 gap-2">';
+                    if (report.fotoDesvio) {
+                        imageHtml += `<img src="${report.fotoDesvio}" alt="Foto do desvio" class="w-full h-16 object-cover rounded border">`;
+                    }
+                    if (report.fotoSolucao) {
+                        imageHtml += `<img src="${report.fotoSolucao}" alt="Foto da solução" class="w-full h-16 object-cover rounded border">`;
+                    }
+                    imageHtml += '</div>';
+                }
+
+                return `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer" onclick="showReportDetails('${report.id}')">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h3 class="font-medium text-gray-800">${report.localizacao}</h3>
+                                <p class="text-sm text-gray-600">📅 ${report.timestamp}</p>
+                                <p class="text-xs text-gray-500">${report.tstPresente === 'sim' ? '✅ TST Presente' : '❌ TST Ausente'}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                ${report.synced ?
+                                    '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">☁️ Sincronizado</span>' :
+                                    '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">📱 Pendente</span>'
+                                }
+                                <button onclick="event.stopPropagation(); deleteReport('${report.id}')" class="text-red-600 hover:text-red-800 text-sm">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                        ${report.houveDesvio === 'sim' ? `
+                            <div class="bg-red-50 p-2 rounded mt-2">
+                                <p class="text-xs text-red-800">⚠️ Desvio: ${report.tipoDesvio} - ${report.statusAcao}</p>
+                            </div>
+                        ` : ''}
+                        ${imageHtml}
+                    </div>
+                `;
+            }).join('');
         }
 
         async function deleteReport(reportId) {
@@ -2166,35 +2050,283 @@
         // Função para salvar o relatório atual como PDF
         async function saveReportAsPDF() {
             const content = document.getElementById('reportDetailsContent');
-            if (!content) return;
+            if (!content) {
+                showNotification('❌ Erro: Conteúdo do relatório não encontrado', 'error');
+                return;
+            }
 
-            // Clonar o conteúdo para manipulação
-            const clone = content.cloneNode(true);
+            // Verificar se há conteúdo
+            if (!content.innerHTML.trim()) {
+                showNotification('❌ Erro: Relatório vazio', 'error');
+                return;
+            }
 
-            // Remover botões e elementos interativos do clone
-            const buttons = clone.querySelectorAll('button, .imageDownloadButtons, .loading-spinner');
-            buttons.forEach(btn => btn.remove());
+            showNotification('📄 Gerando PDF...', 'info');
 
-            // Ajustar imagens para tamanho adequado no PDF
-            const images = clone.querySelectorAll('img');
-            images.forEach(img => {
-                img.style.maxWidth = '100%';
-                img.style.height = 'auto';
-                img.style.pageBreakInside = 'avoid';
-            });
+            try {
+                // Criar um elemento temporário fora da tela para renderização
+                const tempContainer = document.createElement('div');
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.left = '-9999px';
+                tempContainer.style.top = '-9999px';
+                tempContainer.style.width = '800px';
+                tempContainer.style.backgroundColor = 'white';
+                tempContainer.style.padding = '20px';
+                tempContainer.style.fontFamily = 'Arial, sans-serif';
+                document.body.appendChild(tempContainer);
 
-            // Configurações do html2pdf
-            const opt = {
-                margin:       0.5,
-                filename:     'relatorio-seguranca.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, logging: false, dpi: 192, letterRendering: true },
-                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                // Clonar o conteúdo
+                const clone = content.cloneNode(true);
+
+                // Limpar e preparar o clone
+                const buttons = clone.querySelectorAll('button, .imageDownloadButtons, .loading-spinner');
+                buttons.forEach(btn => btn.remove());
+
+                // Adicionar estilos inline para garantir renderização
+                clone.style.width = '100%';
+                clone.style.maxWidth = 'none';
+
+                // Preparar imagens
+                const images = clone.querySelectorAll('img');
+                const imagePromises = Array.from(images).map(img => {
+                    return new Promise((resolve) => {
+                        if (img.complete) {
+                            resolve();
+                        } else {
+                            img.onload = resolve;
+                            img.onerror = resolve; // Resolver mesmo se der erro
+                        }
+                    });
+                });
+
+                // Aguardar imagens carregarem
+                await Promise.all(imagePromises);
+
+                // Ajustar imagens para PDF
+                images.forEach(img => {
+                    img.style.maxWidth = '100%';
+                    img.style.height = 'auto';
+                    img.style.display = 'block';
+                    img.style.margin = '10px 0';
+                });
+
+                // Adicionar cabeçalho ao PDF
+                const header = document.createElement('div');
+                header.innerHTML = `
+                    <h1 style="color: #1f2937; font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+                        📋 RELATÓRIO DE SEGURANÇA
+                    </h1>
+                    <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">
+                        Diário de Bordo Técnico das Contratadas
+                    </p>
+                `;
+                clone.insertBefore(header, clone.firstChild);
+
+                // Adicionar clone ao container temporário
+                tempContainer.appendChild(clone);
+
+                // Aguardar um momento para renderização
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Configurações otimizadas do html2pdf
+                const opt = {
+                    margin:       [0.5, 0.5, 0.5, 0.5],
+                    filename:     `relatorio-seguranca-${new Date().toISOString().split('T')[0]}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.95 },
+                    html2canvas:  {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        dpi: 192,
+                        letterRendering: true,
+                        width: 800,
+                        height: null
+                    },
+                    jsPDF:        {
+                        unit: 'in',
+                        format: 'a4',
+                        orientation: 'portrait',
+                        compress: true
+                    }
+                };
+
+                // Gerar PDF
+                await html2pdf().set(opt).from(tempContainer).save();
+
+                // Limpar
+                document.body.removeChild(tempContainer);
+
+                showNotification('✅ PDF gerado com sucesso!', 'success');
+
+            } catch (error) {
+                console.error('Erro ao gerar PDF:', error);
+                showNotification('❌ Erro ao gerar PDF: ' + error.message, 'error');
+            }
+        }
+
+        // Funções de Edição de Perfil
+        async function showEditProfile() {
+            await loadProfileData();
+            document.getElementById('editProfileModal').classList.remove('hidden');
+        }
+
+        function closeEditProfile() {
+            document.getElementById('editProfileModal').classList.add('hidden');
+            document.getElementById('editProfileForm').reset();
+            document.getElementById('profileError').classList.add('hidden');
+            document.getElementById('profileSuccess').classList.add('hidden');
+        }
+
+        function toggleProfileFields() {
+            const status = document.getElementById('profileStatus').value;
+            const ausenteFields = document.getElementById('ausenteFields');
+
+            if (status === 'ausente') {
+                ausenteFields.classList.remove('hidden');
+            } else {
+                ausenteFields.classList.add('hidden');
+            }
+        }
+
+        async function loadProfileData() {
+            try {
+                let profileData = {};
+
+                if (APP_CONFIG.useFirebase && APP_CONFIG.currentUser) {
+                    // Carregar do Firestore
+                    const doc = await APP_CONFIG.firestore.collection('users').doc(APP_CONFIG.currentUser.uid).get();
+                    if (doc.exists) {
+                        profileData = doc.data();
+                    }
+                } else {
+                    // Carregar do localStorage
+                    const saved = localStorage.getItem('userProfile');
+                    if (saved) {
+                        profileData = JSON.parse(saved);
+                    }
+                }
+
+                // Preencher o formulário
+                document.getElementById('profileNome').value = profileData.nome || APP_CONFIG.currentUser.nome || '';
+                document.getElementById('profileEmpresa').value = profileData.empresa || '';
+                document.getElementById('profileContrato').value = profileData.contrato || APP_CONFIG.currentUser.contrato || '';
+                document.getElementById('profileTelefone').value = profileData.telefone || APP_CONFIG.currentUser.telefone || '';
+                document.getElementById('profileEstaDeFerias').checked = profileData.estaDeFerias || APP_CONFIG.currentUser.estaDeFerias || false;
+                document.getElementById('profileDataInicioFerias').value = profileData.dataInicioFerias || APP_CONFIG.currentUser.dataInicioFerias || '';
+                document.getElementById('profileDataFimFerias').value = profileData.dataFimFerias || APP_CONFIG.currentUser.dataFimFerias || '';
+                document.getElementById('profileDemobilizado').checked = profileData.demobilizado || APP_CONFIG.currentUser.demobilizado || false;
+                document.getElementById('profileStatus').value = profileData.status || APP_CONFIG.currentUser.status || '';
+                document.getElementById('motivoAusencia').value = profileData.motivoAusencia || '';
+                document.getElementById('dataInicioAusencia').value = profileData.dataInicioAusencia || '';
+                document.getElementById('dataFimAusencia').value = profileData.dataFimAusencia || '';
+
+                // Atualizar campos condicionais
+                toggleProfileFields();
+                toggleProfileFeriasFields();
+
+            } catch (error) {
+                console.error('Erro ao carregar dados do perfil:', error);
+                showNotification('❌ Erro ao carregar dados do perfil', 'error');
+            }
+        }
+
+        async function saveProfile() {
+            const errorDiv = document.getElementById('profileError');
+            const successDiv = document.getElementById('profileSuccess');
+
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            const profileData = {
+                nome: document.getElementById('profileNome').value,
+                empresa: document.getElementById('profileEmpresa').value,
+                contrato: document.getElementById('profileContrato').value,
+                telefone: document.getElementById('profileTelefone').value,
+                estaDeFerias: document.getElementById('profileEstaDeFerias').checked,
+                dataInicioFerias: document.getElementById('profileDataInicioFerias').value,
+                dataFimFerias: document.getElementById('profileDataFimFerias').value,
+                demobilizado: document.getElementById('profileDemobilizado').checked,
+                status: document.getElementById('profileStatus').value,
+                motivoAusencia: document.getElementById('motivoAusencia').value,
+                dataInicioAusencia: document.getElementById('dataInicioAusencia').value,
+                dataFimAusencia: document.getElementById('dataFimAusencia').value,
+                updatedAt: new Date().toISOString()
             };
 
-            // Gerar PDF
-            html2pdf().set(opt).from(clone).save();
+            try {
+                if (APP_CONFIG.useFirebase && APP_CONFIG.currentUser) {
+                    // Salvar no Firestore
+                    await APP_CONFIG.firestore.collection('users').doc(APP_CONFIG.currentUser.uid).update(profileData);
+                } else {
+                    // Salvar no localStorage
+                    localStorage.setItem('userProfile', JSON.stringify(profileData));
+                }
+
+                // Atualizar informações do usuário no header
+                updateUserInfo(profileData);
+
+                successDiv.textContent = '✅ Perfil atualizado com sucesso!';
+                successDiv.classList.remove('hidden');
+
+                // Fechar modal após 2 segundos
+                setTimeout(() => {
+                    closeEditProfile();
+                }, 2000);
+
+                showNotification('✅ Perfil atualizado com sucesso!', 'success');
+
+            } catch (error) {
+                console.error('Erro ao salvar perfil:', error);
+                errorDiv.textContent = 'Erro ao salvar perfil: ' + error.message;
+                errorDiv.classList.remove('hidden');
+            }
         }
+
+        function updateUserInfo(profileData) {
+            const userInfo = document.getElementById('userInfo');
+            let displayName = APP_CONFIG.currentUser ? (APP_CONFIG.currentUser.nome || APP_CONFIG.currentUser.displayName || APP_CONFIG.currentUser.email) : 'Usuário Local';
+
+            if (profileData.nome) {
+                displayName = profileData.nome;
+            }
+
+            if (profileData.status) {
+                const statusText = {
+                    'ativo': 'Ativo',
+                    'ausente': 'Ausente',
+                    'desmobilizado': 'Desmobilizado'
+                }[profileData.status] || profileData.status;
+
+                displayName += ` - ${statusText}`;
+
+                if (profileData.status === 'ausente' && profileData.dataInicioAusencia) {
+                    displayName += ` (${profileData.dataInicioAusencia}`;
+                    if (profileData.dataFimAusencia) {
+                        displayName += ` até ${profileData.dataFimAusencia}`;
+                    }
+                    displayName += ')';
+                }
+            }
+
+            if (profileData.contrato) {
+                displayName += ` - Contrato: ${profileData.contrato}`;
+            }
+
+            if (profileData.telefone) {
+                displayName += ` - Tel: ${profileData.telefone}`;
+            }
+
+            displayName += ` - ${APP_CONFIG.useFirebase ? 'Nuvem' : 'Local'}`;
+            userInfo.textContent = displayName;
+        }
+
+        // Event listener para o formulário de edição de perfil
+        document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await saveProfile();
+        });
     </script>
 </body>
 </html>
