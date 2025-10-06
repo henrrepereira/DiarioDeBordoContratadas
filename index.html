@@ -16,6 +16,9 @@
 
     <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
+    <script>
+        console.log('Arquivo firebase-config.js carregado com sucesso');
+    </script>
 
     <style>
         /* Estilos PWA e offline */
@@ -907,6 +910,7 @@
                         useLocalAccess();
                     }
                 } catch (error) {
+                    console.error('Erro detalhado no login:', error);
                     errorDiv.textContent = 'Erro no login: ' + error.message;
                     errorDiv.classList.remove('hidden');
                 }
