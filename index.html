@@ -17,9 +17,6 @@
     <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
 
-    <!-- html2pdf library for PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
     <style>
         /* Estilos PWA e offline */
         .offline-indicator {
@@ -872,7 +869,7 @@
         // Inicialização da Aplicação
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🚀 Iniciando Sistema de Relatórios com Sincronização em Nuvem...');
-            
+
             try {
                 await initializeFirebase();
                 showLogin();
@@ -882,12 +879,182 @@
                 showNotification('⚠️ Modo local ativado (erro no Firebase)', 'warning');
                 showLogin();
             }
-            
+
             // Configurar detecção de offline
             setupOfflineDetection();
-            
+
             // Carregar dados locais
             loadLocalData();
+
+            // Adicionar event listeners após DOM estar carregado
+            // Login com Firebase
+            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const errorDiv = document.getElementById('loginError');
+
+                errorDiv.classList.add('hidden');
+
+                try {
+                    if (APP_CONFIG.useFirebase) {
+                        const userCredential = await APP_CONFIG.auth.signInWithEmailAndPassword(email, password);
+                        console.log('✅ Login bem-sucedido');
+                        showApp();
+                    } else {
+                        // Modo local
+                        useLocalAccess();
+                    }
+                } catch (error) {
+                    errorDiv.textContent = 'Erro no login: ' + error.message;
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+
+            // Registro de nova conta
+            document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const email = document.getElementById('emailCadastro').value;
+                const password = document.getElementById('senhaCadastro').value;
+                const confirmarSenha = document.getElementById('confirmarSenha').value;
+                const nome = document.getElementById('nomeCompleto').value;
+                const empresa = document.getElementById('empresa').value;
+                const errorDiv = document.getElementById('registrationError');
+                const successDiv = document.getElementById('registrationSuccess');
+
+                errorDiv.classList.add('hidden');
+                successDiv.classList.add('hidden');
+
+                if (password !== confirmarSenha) {
+                    errorDiv.textContent = 'As senhas não coincidem';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                try {
+                    if (APP_CONFIG.useFirebase) {
+                        const userCredential = await APP_CONFIG.auth.createUserWithEmailAndPassword(email, password);
+
+                        // Atualizar perfil do usuário
+                        await userCredential.user.updateProfile({
+                            displayName: nome
+                        });
+
+                        // Salvar informações adicionais no Firestore
+                        await APP_CONFIG.firestore.collection('users').doc(userCredential.user.uid).set({
+                            nome: nome,
+                            email: email,
+                            empresa: empresa,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                        successDiv.textContent = 'Conta criada com sucesso! Redirecionando...';
+                        successDiv.classList.remove('hidden');
+
+                        setTimeout(() => {
+                            showLogin();
+                        }, 2000);
+                    } else {
+                        successDiv.textContent = 'Modo local: conta criada localmente';
+                        successDiv.classList.remove('hidden');
+                        setTimeout(() => {
+                            showLogin();
+                        }, 2000);
+                    }
+                } catch (error) {
+                    errorDiv.textContent = 'Erro ao criar conta: ' + error.message;
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+
+            // Gerenciamento de Relatórios
+            document.getElementById('reportForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const report = {
+                    id: 'local_' + Date.now(),
+                    timestamp: new Date().toLocaleString('pt-BR'),
+                    localizacao: document.getElementById('localizacao').value,
+                    tstPresente: document.getElementById('tstPresente').value,
+                    boaJornada: parseInt(document.getElementById('boaJornada').value) || 0,
+                    inspecoesRAC: parseInt(document.getElementById('inspecoesRAC').value) || 0,
+                    inspecoesART: parseInt(document.getElementById('inspecoesART').value) || 0,
+                    outrasInspecoes: parseInt(document.getElementById('outrasInspecoes').value) || 0,
+                    interdicoesCriticas: parseInt(document.getElementById('interdicoesCriticas').value) || 0,
+                    n3Registrados: parseInt(document.getElementById('n3Registrados').value) || 0,
+                    acoesInternas: parseInt(document.getElementById('acoesInternas').value) || 0,
+                    acoesVale: parseInt(document.getElementById('acoesVale').value) || 0,
+                    racsInspecionados: [document.getElementById('racSelect').value].filter(Boolean),
+                    houveDesvio: document.getElementById('houveDesvio').value,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    synced: false
+                };
+
+                // Adicionar campos específicos se necessário
+                if (report.tstPresente === 'ausente') {
+                    report.primeiroDiaAusencia = document.getElementById('primeiroDiaAusencia').value;
+                    report.diasAusente = document.getElementById('diasAusente').value;
+                    report.motivo = document.getElementById('motivo').value;
+                }
+
+                if (document.getElementById('houveDesvio').value === 'sim') {
+                    report.houveDesvio = 'sim';
+                    report.tipoDesvio = document.getElementById('tipoDesvio').value;
+                    report.descricaoDesvio = document.getElementById('descricaoDesvio').value;
+                    report.localDesvio = document.getElementById('localDesvio').value;
+                    report.acaoTomada = document.getElementById('acaoTomada').value;
+                    report.statusAcao = document.getElementById('statusAcao').value;
+
+                    // Processar fotos se houver
+                    const fotoDesvio = document.getElementById('fotoDesvio').files[0];
+                    if (fotoDesvio) {
+                        report.fotoDesvio = await readFileAsDataURL(fotoDesvio);
+                    }
+
+                    const fotoSolucao = document.getElementById('fotoSolucao').files[0];
+                    if (fotoSolucao) {
+                        report.fotoSolucao = await readFileAsDataURL(fotoSolucao);
+                    }
+                }
+
+                // Salvar relatório
+                APP_CONFIG.reports.push(report);
+                saveLocalData();
+
+                // Tentar sincronizar se online
+                if (navigator.onLine && APP_CONFIG.useFirebase) {
+                    await saveReportToCloud(report);
+                }
+
+                displayReports();
+                clearForm();
+
+                showNotification('✅ Relatório salvo' + (APP_CONFIG.useFirebase ? ' e sincronizado' : ''), 'success');
+            });
+
+            // Event listener para o formulário de desvios críticos
+            document.getElementById('desviosCriticosForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await saveDesvioCritico();
+            });
+
+            // Event listener para limpar formulário de desvios críticos
+            document.getElementById('btnLimparDesvio').addEventListener('click', function() {
+                clearDesvioCriticoForm();
+            });
+
+            // Botões para alternar formulários
+            document.getElementById('btnRelatorio').addEventListener('click', function() {
+                showForm('relatorio');
+            });
+
+            document.getElementById('btnDesviosCriticos').addEventListener('click', function() {
+                showForm('desviosCriticos');
+            });
         });
 
         // Firebase Initialization
