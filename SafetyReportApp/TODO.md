@@ -1,27 +1,32 @@
-# TODO: Complete User Profile Implementation
+# Lista de Tarefas - Preparação para GitHub
 
-## Remaining Tasks
+## ✅ Tarefas Concluídas
+- [x] Analisar o aplicativo Safety Report
+- [x] Identificar funcionalidades e tecnologias
 
-1. **Update registration JavaScript**
-   - Save contrato, telefone, estaDeFerias, dataInicioFerias, dataFimFerias, demobilizado to Firestore
+## 🔄 Tarefas Pendentes
+- [ ] Criar README.md em português com instruções completas
+- [ ] Adicionar seção específica de testes no iOS
+- [ ] Verificar compatibilidade PWA no iOS
+- [ ] Adicionar manifest.json para PWA (se necessário)
+- [ ] Criar instruções de instalação como PWA no iOS
+- [ ] Testar abertura no Safari mobile
 
-2. **Update profile edit modal**
-   - Add contrato, telefone fields
-   - Add estaDeFerias checkbox and feriasFields (conditional)
-   - Add demobilizado checkbox
-   - Update load/save functions
+## 📋 Detalhes das Tarefas
 
-3. **Update user display**
-   - Modify userInfo to show contrato, telefone, férias status
+### README.md
+- Descrição do aplicativo
+- Funcionalidades principais
+- Tecnologias utilizadas
+- Instruções de instalação
+- Como testar no iOS (Safari)
+- Como instalar como PWA no iOS
+- Screenshots (se possível)
+- Contribuição
 
-4. **Test integration**
-   - Verify loading data
-   - Verify saving to Firestore
-   - Verify updating display
-   - Test offline/online
-
-## Status
-- [ ] Registration JS updated
-- [ ] Profile modal updated
-- [ ] User display updated
-- [ ] Tests performed
+### Testes iOS
+- Verificar responsividade
+- Testar funcionalidades offline
+- Testar sincronização com Firebase
+- Testar exportação PDF
+- Testar compartilhamento WhatsApp

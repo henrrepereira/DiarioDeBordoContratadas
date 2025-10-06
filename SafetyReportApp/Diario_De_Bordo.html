@@ -1023,6 +1023,25 @@
         function showFirebaseConfig() {
             document.getElementById('firebaseConfigScreen').classList.remove('hidden');
             document.getElementById('loginScreen').classList.add('hidden');
+
+            // Preencher com configuração padrão
+            const defaultConfig = {
+                apiKey: "AIzaSyBnit6_u1ZZG4Mg1Ma4q9c0OeTqeos5mJQ",
+                authDomain: "diario-de-bordo-tecnico.firebaseapp.com",
+                projectId: "diario-de-bordo-tecnico",
+                storageBucket: "diario-de-bordo-tecnico.firebasestorage.app",
+                messagingSenderId: "398639660413",
+                appId: "1:398639660413:web:ac182a4ea9e0f90edb2014",
+                measurementId: "G-5HT50J72E2"
+            };
+
+            document.getElementById('apiKey').value = defaultConfig.apiKey;
+            document.getElementById('authDomain').value = defaultConfig.authDomain;
+            document.getElementById('projectId').value = defaultConfig.projectId;
+            document.getElementById('storageBucket').value = defaultConfig.storageBucket;
+            document.getElementById('messagingSenderId').value = defaultConfig.messagingSenderId;
+            document.getElementById('appId').value = defaultConfig.appId;
+            document.getElementById('measurementId').value = defaultConfig.measurementId;
         }
 
         function useLocalMode() {
