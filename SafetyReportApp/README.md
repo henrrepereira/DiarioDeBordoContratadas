@@ -1,76 +1,36 @@
-# Diário de Bordo Técnico das Contratadas
+# SafetyReportApp - Relatório de Segurança
 
-Este é um aplicativo web progressivo (PWA) para registro e gerenciamento de relatórios de segurança, com sincronização em nuvem via Firebase e suporte offline.
+Este repositório contém os arquivos do aplicativo web "Relatório de Segurança" que pode ser executado como Progressive Web App (PWA) em iOS, Android e desktop.
 
----
+## Arquivos Principais para o Funcionamento do App
 
-## Tecnologias Utilizadas
+- `index.html` (antigo `Diario_De_Bordo.html`): Página principal do app.
+- `manifest.json`: Configuração do PWA.
+- `sw.js`: Service Worker para funcionamento offline.
+- `safety-report-app-pwa.html`: Versão PWA do app.
+- `safety-report-app-completo.html`: Versão completa do app.
+- `style.css`: Estilos CSS do app.
+- `script.js`: Script JavaScript principal.
+- `firebase-config.js`: Configuração do Firebase.
+- `INSTRUCOES_PWA.md`: Instruções para uso do PWA.
+- `INSTRUCOES_FIREBASE.md`: Instruções para configuração do Firebase.
+- Ícones e imagens, como `icon-192x192.jpg` e outros arquivos de ícones.
 
-- HTML5, CSS3 (Tailwind CSS)
-- JavaScript (ES6+)
-- Firebase (Firestore, Auth, Storage)
-- Bibliotecas: html2pdf.js, SheetJS (xlsx)
-- PWA com suporte offline
+## Como Usar
 
----
+1. Faça o clone deste repositório.
+2. Abra o arquivo `index.html` em um servidor local ou hospede no GitHub Pages.
+3. Para testes em dispositivos móveis, siga as instruções no arquivo `INSTRUCOES_PWA.md`.
+4. Configure o Firebase conforme o arquivo `INSTRUCOES_FIREBASE.md` para usar a sincronização em nuvem.
 
-## Como Testar no iOS
+## Deploy no GitHub Pages
 
-### Requisitos
-
-- Dispositivo iOS (iPhone ou iPad) com iOS 11.3 ou superior
-- Navegador Safari atualizado
-
-### Passos para Testar
-
-1. Abra o Safari no seu dispositivo iOS.
-2. Digite a URL do aplicativo (exemplo: https://seu-dominio.com ou localhost se estiver na rede local).
-3. Navegue pelo aplicativo normalmente para testar funcionalidades.
-4. Para testar o modo offline:
-   - Acesse o aplicativo com conexão.
-   - Depois, desligue o Wi-Fi e dados móveis.
-   - Verifique se os dados são salvos localmente e se o indicador de modo offline aparece.
-5. Para testar a sincronização:
-   - Conecte-se com uma conta Firebase válida.
-   - Faça login e crie relatórios.
-   - Verifique se os dados são sincronizados com a nuvem.
-6. Para instalar como PWA no iOS:
-   - No Safari, toque no ícone de compartilhamento (quadrado com seta para cima).
-   - Selecione "Adicionar à Tela de Início".
-   - O aplicativo será instalado como um ícone na tela inicial.
-   - Abra o aplicativo a partir do ícone para uma experiência similar a um app nativo.
-
----
-
-## Funcionalidades Principais
-
-- Cadastro e login via Firebase
-- Registro de relatórios de segurança com fotos
-- Sincronização automática com Firebase Firestore
-- Suporte offline com armazenamento local
-- Exportação de relatórios em PDF e Excel
-- Compartilhamento via WhatsApp
-- Gerenciamento de perfil do usuário
-- Cadastro de desvios críticos
-
----
-
-## Como Contribuir
-
-1. Faça um fork do repositório.
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`).
-3. Faça commit das suas alterações (`git commit -m 'Adiciona nova funcionalidade'`).
-4. Faça push para a branch (`git push origin feature/nova-funcionalidade`).
-5. Abra um Pull Request.
-
----
+- Certifique-se que o arquivo principal está nomeado como `index.html` dentro da pasta do app.
+- Ative o GitHub Pages na branch `master` e configure a pasta raiz.
+- Acesse o app via URL do GitHub Pages.
 
 ## Contato
 
-Para dúvidas ou suporte, entre em contato com o time de desenvolvimento.
+Para dúvidas ou suporte, entre em contato com o desenvolvedor.
 
 ---
-
-## Licença
-
-Este projeto está licenciado sob a licença MIT.
